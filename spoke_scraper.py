@@ -10,7 +10,7 @@ import json
 import time
 
 from utils.claude_client import call_claude
-from utils.logger import get_logger, log_spoke_start, log_spoke_end, log_spoke_error
+from utils.logger import get_logger, log_spoke_start, log_spoke_end, log_spoke_error, extract_json
 
 LOGGER = get_logger("SCRAPER")
 
@@ -57,14 +57,7 @@ async def run(competitor_name: str) -> dict | None:
         elapsed = time.time() - start
         log_spoke_end(LOGGER, result["input_tokens"], result["output_tokens"], elapsed)
 
-        # Parser le JSON retourné par Claude
-        content = result["content"].strip()
-        # Nettoyer si Claude a quand même ajouté des backticks
-        if content.startswith("```"):
-            content = content.split("```")[1]
-            if content.startswith("json"):
-                content = content[4:]
-        return json.loads(content)
+        return extract_json(result["content"])
 
     except Exception as e:
         log_spoke_error(LOGGER, e)

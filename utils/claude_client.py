@@ -2,7 +2,8 @@
 Wrapper async autour du SDK Anthropic.
 
 Décisions techniques documentées :
-- Haiku 4.5  : mode standard (rapide, économique) — spokes 1-3 + rapport initial
+- Sonnet 4.6 : mode standard avec web tools — spokes 1-3 (Haiku ne supporte pas web_search)
+- Haiku 4.5  : rapport initial sans web tools (spoke 4)
 - Opus 4.6   : mode deep (thinking adaptatif) — rapport approfondi sur demande
 - web_search + web_fetch (server-side) : déclarés dans tools[], Claude les utilise
   automatiquement. Gestion du stop_reason "pause_turn" incluse.
@@ -19,7 +20,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-MODEL_STANDARD = "claude-haiku-4-5"
+MODEL_WEB = "claude-sonnet-4-6"    # web_search/web_fetch — Haiku ne supporte pas ces tools
+MODEL_STANDARD = "claude-haiku-4-5"  # rapport sans web tools (plus économique)
 MODEL_DEEP = "claude-opus-4-6"
 
 WEB_TOOLS = [
@@ -51,7 +53,12 @@ async def call_claude(
     Gère automatiquement le stop_reason "pause_turn" (web tools > 10 itérations).
     """
     client = anthropic.AsyncAnthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-    model = MODEL_DEEP if deep else MODEL_STANDARD
+    if deep:
+        model = MODEL_DEEP
+    elif use_web:
+        model = MODEL_WEB   # Sonnet 4.6 requis pour web_search/web_fetch
+    else:
+        model = MODEL_STANDARD
     tools = WEB_TOOLS if use_web else []
 
     kwargs = {

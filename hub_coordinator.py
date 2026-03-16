@@ -14,6 +14,12 @@ import asyncio
 import json
 import sys
 import webbrowser
+
+# Fix encodage terminal Windows (cp1252 ne supporte pas les caractères spéciaux)
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 from datetime import datetime
 from pathlib import Path
 
@@ -104,7 +110,7 @@ async def run(competitor_name: str) -> None:
 
     # ÉTAPE 3 : Sauvegarde + ouverture navigateur
     report_path = _save_report(competitor_name, html)
-    print(f"\n✅ Rapport sauvegardé : {report_path}")
+    print(f"\n[OK] Rapport sauvegarde : {report_path}")
     webbrowser.open(report_path.as_uri())
 
     # ÉTAPE 4 : Proposer le mode deep
@@ -114,7 +120,7 @@ async def run(competitor_name: str) -> None:
     print("-"*60)
 
     try:
-        answer = input("  [o/N] → ").strip().lower()
+        answer = input("  [o/N] > ").strip().lower()
     except (EOFError, KeyboardInterrupt):
         answer = "n"
 
@@ -134,7 +140,7 @@ async def run(competitor_name: str) -> None:
         )
 
         deep_path = _save_report(competitor_name, html_deep, suffix="_deep")
-        print(f"\n✅ Rapport approfondi sauvegardé : {deep_path}")
+        print(f"\n[OK] Rapport approfondi sauvegarde : {deep_path}")
         webbrowser.open(deep_path.as_uri())
     else:
         print("\n  Analyse terminée.")
