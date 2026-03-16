@@ -1,0 +1,18 @@
+# Données sensibles — ne jamais commiter
+.env
+my_product.json
+outputs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
