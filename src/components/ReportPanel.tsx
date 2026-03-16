@@ -1,0 +1,68 @@
+interface Props {
+  html: string
+  streaming: boolean
+  onDeepAnalysis?: () => void
+  deepLoading?: boolean
+}
+
+export default function ReportPanel({ html, streaming, onDeepAnalysis, deepLoading }: Props) {
+  const isComplete = !streaming && html.includes('</html>')
+
+  return (
+    <div style={{ marginTop: 32 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
+        <h2 style={{ margin: 0, color: '#e0e0e0', fontSize: 18 }}>
+          Rapport généré {streaming && <span style={{ color: '#6c63ff', fontSize: 13 }}>— génération en cours...</span>}
+        </h2>
+        {isComplete && onDeepAnalysis && (
+          <button
+            onClick={onDeepAnalysis}
+            disabled={deepLoading}
+            style={{
+              marginLeft: 'auto', padding: '8px 18px',
+              background: deepLoading ? '#2a2a4a' : 'transparent',
+              border: '1px solid #6c63ff', borderRadius: 6, color: deepLoading ? '#666' : '#6c63ff',
+              fontSize: 12, cursor: deepLoading ? 'not-allowed' : 'pointer', fontWeight: 600,
+            }}
+          >
+            {deepLoading ? 'Génération Opus 4.6...' : '✦ Approfondir avec Opus 4.6'}
+          </button>
+        )}
+      </div>
+
+      {/* Rendu HTML dans un iframe sandboxé */}
+      {html && (
+        <iframe
+          srcDoc={html}
+          style={{
+            width: '100%', height: 700, border: '1px solid #1e1e3a',
+            borderRadius: 8, background: '#fff',
+          }}
+          title="Rapport compétitif"
+          sandbox="allow-same-origin"
+        />
+      )}
+
+      {/* Bouton téléchargement */}
+      {isComplete && (
+        <div style={{ marginTop: 12, display: 'flex', gap: 12 }}>
+          <button
+            onClick={() => {
+              const blob = new Blob([html], { type: 'text/html' })
+              const a = document.createElement('a')
+              a.href = URL.createObjectURL(blob)
+              a.download = 'rapport-competitif.html'
+              a.click()
+            }}
+            style={{
+              padding: '8px 18px', background: '#1e1e3a', border: '1px solid #2a2a4a',
+              borderRadius: 6, color: '#aaa', fontSize: 12, cursor: 'pointer',
+            }}
+          >
+            Télécharger HTML
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
