@@ -68,9 +68,10 @@ export default function App() {
     updateSpoke('sentiment', { status: sentiment ? 'done' : 'error' })
     updateSpoke('positioning', { status: positioning ? 'done' : 'error' })
 
-    if (scraperResult.status === 'rejected') addLog('scraper', `Erreur: ${scraperResult.reason}`)
-    if (sentimentResult.status === 'rejected') addLog('sentiment', `Erreur: ${sentimentResult.reason}`)
-    if (positioningResult.status === 'rejected') addLog('positioning', `Erreur: ${positioningResult.reason}`)
+    const errMsg = (r: unknown) => r instanceof Error ? r.message : String(r)
+    if (scraperResult.status === 'rejected') addLog('scraper', `Erreur: ${errMsg(scraperResult.reason)}`)
+    if (sentimentResult.status === 'rejected') addLog('sentiment', `Erreur: ${errMsg(sentimentResult.reason)}`)
+    if (positioningResult.status === 'rejected') addLog('positioning', `Erreur: ${errMsg(positioningResult.reason)}`)
 
     setLastResults({ scraper, sentiment, positioning })
 
