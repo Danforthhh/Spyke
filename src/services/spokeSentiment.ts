@@ -1,34 +1,34 @@
-// RÔLE ARCHITECTURAL : SPOKE 2 (Sentiment Analyst)
-// Inputs  : competitor_name, apiKey
+// ARCHITECTURAL ROLE: SPOKE 2 (Sentiment Analyst)
+// Inputs  : competitor_name
 // Outputs : SentimentData JSON
-// Isolé   : Ne reçoit PAS les outputs des autres spokes
+// Isolated: does NOT receive outputs from other spokes
 
 import { callClaude, extractJson } from './claudeClient'
 import type { SentimentData } from '../types'
 
-const SYSTEM = `Tu es un analyste spécialisé dans l'analyse des avis clients SaaS B2B.
-Recherche via le web les avis sur G2, Capterra et Reddit pour le concurrent donné.
-Retourne UNIQUEMENT un objet JSON valide :
+const SYSTEM = `You are an analyst specializing in B2B SaaS customer review analysis.
+Search the web for reviews on G2, Capterra and Reddit for the given competitor.
+Return ONLY a valid JSON object:
 {
-  "avg_score": number (sur 5),
+  "avg_score": number (out of 5),
   "review_count": number,
-  "top_complaints": ["plainte 1", "plainte 2", "plainte 3"],
-  "top_praises": ["point fort 1", "point fort 2", "point fort 3"],
-  "sample_quotes": ["verbatim 1 (source : G2)", "verbatim 2", "verbatim 3"]
+  "top_complaints": ["complaint 1", "complaint 2", "complaint 3"],
+  "top_praises": ["strength 1", "strength 2", "strength 3"],
+  "sample_quotes": ["verbatim 1 (source: G2)", "verbatim 2", "verbatim 3"]
 }
-Maximum 3 verbatims. Rien d'autre que le JSON.`
+Maximum 3 quotes. Nothing other than the JSON.`
 
 export async function runSentiment(
   competitor: string,
   onLog: (msg: string) => void,
 ): Promise<SentimentData> {
-  onLog(`Recherche avis G2, Capterra, Reddit pour ${competitor}...`)
+  onLog(`Searching G2, Capterra, Reddit reviews for ${competitor}...`)
   const content = await callClaude(
     SYSTEM,
-    `Analyse les avis clients du concurrent SaaS B2B : ${competitor}`,
+    `Analyze customer reviews for B2B SaaS competitor: ${competitor}`,
     true,
     onLog,
   )
-  onLog('Extraction JSON...')
+  onLog('Extracting JSON...')
   return extractJson<SentimentData>(content)
 }

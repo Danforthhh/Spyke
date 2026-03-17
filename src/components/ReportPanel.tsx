@@ -12,7 +12,7 @@ export default function ReportPanel({ html, streaming, onDeepAnalysis, deepLoadi
     <div style={{ marginTop: 32 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
         <h2 style={{ margin: 0, color: '#e0e0e0', fontSize: 18 }}>
-          Rapport généré {streaming && <span style={{ color: '#6c63ff', fontSize: 13 }}>— génération en cours...</span>}
+          Report generated {streaming && <span style={{ color: '#6c63ff', fontSize: 13 }}>— generating...</span>}
         </h2>
         {isComplete && onDeepAnalysis && (
           <button
@@ -25,12 +25,12 @@ export default function ReportPanel({ html, streaming, onDeepAnalysis, deepLoadi
               fontSize: 12, cursor: deepLoading ? 'not-allowed' : 'pointer', fontWeight: 600,
             }}
           >
-            {deepLoading ? 'Génération Opus 4.6...' : '✦ Approfondir avec Opus 4.6'}
+            {deepLoading ? 'Generating with Opus 4.6...' : '✦ Deep analysis with Opus 4.6'}
           </button>
         )}
       </div>
 
-      {/* Rendu HTML dans un iframe sandboxé */}
+      {/* HTML rendered in sandboxed iframe */}
       {html && (
         <iframe
           srcDoc={html}
@@ -38,12 +38,12 @@ export default function ReportPanel({ html, streaming, onDeepAnalysis, deepLoadi
             width: '100%', height: 700, border: '1px solid #1e1e3a',
             borderRadius: 8, background: '#fff',
           }}
-          title="Rapport compétitif"
+          title="Competitive report"
           sandbox="allow-same-origin"
         />
       )}
 
-      {/* Bouton téléchargement */}
+      {/* Download button */}
       {isComplete && (
         <div style={{ marginTop: 12, display: 'flex', gap: 12 }}>
           <button
@@ -51,7 +51,7 @@ export default function ReportPanel({ html, streaming, onDeepAnalysis, deepLoadi
               const blob = new Blob([html], { type: 'text/html' })
               const a = document.createElement('a')
               a.href = URL.createObjectURL(blob)
-              a.download = 'rapport-competitif.html'
+              a.download = 'competitive-report.html'
               a.click()
             }}
             style={{
@@ -59,7 +59,7 @@ export default function ReportPanel({ html, streaming, onDeepAnalysis, deepLoadi
               borderRadius: 6, color: '#aaa', fontSize: 12, cursor: 'pointer',
             }}
           >
-            Télécharger HTML
+            Download HTML
           </button>
         </div>
       )}

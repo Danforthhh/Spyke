@@ -57,7 +57,7 @@ export default function App() {
     setReportHtml('')
     setLastResults(null)
 
-    // Lancer les 3 spokes en parallèle (isolation totale — chacun ne reçoit que competitor)
+    // Run 3 spokes in parallel (full isolation — each only receives competitor name)
     updateSpoke('scraper', { status: 'running' })
     updateSpoke('sentiment', { status: 'running' })
     updateSpoke('positioning', { status: 'running' })
@@ -78,13 +78,13 @@ export default function App() {
     updateSpoke('positioning', { status: positioning ? 'done' : 'error' })
 
     const errMsg = (r: unknown) => r instanceof Error ? r.message : String(r)
-    if (scraperResult.status === 'rejected') addLog('scraper', `Erreur: ${errMsg(scraperResult.reason)}`)
-    if (sentimentResult.status === 'rejected') addLog('sentiment', `Erreur: ${errMsg(sentimentResult.reason)}`)
-    if (positioningResult.status === 'rejected') addLog('positioning', `Erreur: ${errMsg(positioningResult.reason)}`)
+    if (scraperResult.status === 'rejected') addLog('scraper', `Error: ${errMsg(scraperResult.reason)}`)
+    if (sentimentResult.status === 'rejected') addLog('sentiment', `Error: ${errMsg(sentimentResult.reason)}`)
+    if (positioningResult.status === 'rejected') addLog('positioning', `Error: ${errMsg(positioningResult.reason)}`)
 
     setLastResults({ scraper, sentiment, positioning })
 
-    // Spoke 4 : rapport (streaming)
+    // Spoke 4: report (streaming)
     updateSpoke('report', { status: 'running' })
     setStreaming(true)
     let html = ''
@@ -96,7 +96,7 @@ export default function App() {
       updateSpoke('report', { status: 'done' })
     } catch (e) {
       updateSpoke('report', { status: 'error' })
-      addLog('report', `Erreur: ${e}`)
+      addLog('report', `Error: ${e}`)
     }
     setStreaming(false)
     setRunning(false)
@@ -122,7 +122,7 @@ export default function App() {
       updateSpoke('report', { status: 'done' })
     } catch (e) {
       updateSpoke('report', { status: 'error' })
-      addLog('report', `Erreur: ${e}`)
+      addLog('report', `Error: ${e}`)
     }
     setStreaming(false)
     setDeepLoading(false)
@@ -160,7 +160,7 @@ export default function App() {
         {/* Input */}
         <div style={{ marginBottom: 40 }}>
           <div style={{ fontSize: 12, color: '#6c63ff', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>
-            Concurrent SaaS B2B
+            SaaS B2B Competitor
           </div>
           <div style={{ display: 'flex', gap: 12 }}>
             <input
@@ -186,11 +186,11 @@ export default function App() {
                 transition: 'background 0.2s', whiteSpace: 'nowrap',
               }}
             >
-              {running ? 'Analyse...' : '▶ Analyser'}
+              {running ? 'Analyzing...' : '▶ Analyze'}
             </button>
           </div>
           <div style={{ marginTop: 8, fontSize: 11, color: '#444' }}>
-            Modèle : Sonnet 4.6 (spokes 1-3, web search) · Haiku 4.5 (rapport)
+            Model: Sonnet 4.6 (spokes 1-3, web search) · Haiku 4.5 (report)
           </div>
         </div>
 
@@ -204,7 +204,7 @@ export default function App() {
           </div>
         )}
 
-        {/* Rapport */}
+        {/* Report */}
         {reportHtml && (
           <ReportPanel
             html={reportHtml}
@@ -219,7 +219,7 @@ export default function App() {
           <div style={{ textAlign: 'center', padding: '80px 0', color: '#2a2a4a' }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>◎</div>
             <div style={{ fontFamily: 'monospace', fontSize: 13 }}>
-              Entrez un concurrent pour démarrer l'analyse
+              Enter a competitor name to start the analysis
             </div>
           </div>
         )}

@@ -1,11 +1,11 @@
 /**
- * Wrapper Anthropic SDK pour usage browser via Cloudflare Worker proxy.
- * Les clés API sont stockées côté worker (secrets Cloudflare) — jamais dans le bundle.
- * Notes sur les casts :
- * - WEB_TOOLS : web_search/web_fetch sont des tools server-side non présents dans ToolUnion → cast any
- * - thinking adaptive : type 'adaptive' pas encore dans les types SDK → cast any
- * - pause_turn : stop_reason type SDK incomplet → cast string
- * - Streaming : on utilise les events bruts (content_block_delta) au lieu de text_stream
+ * Anthropic SDK wrapper for browser usage via Cloudflare Worker proxy.
+ * API keys are stored server-side (Cloudflare secrets) — never in the bundle.
+ * Cast notes:
+ * - WEB_TOOLS: web_search/web_fetch are server-side tools not present in ToolUnion → cast any
+ * - thinking adaptive: type 'adaptive' not yet in SDK types → cast any
+ * - pause_turn: stop_reason type incomplete in SDK → cast string
+ * - Streaming: using raw SSE events (content_block_delta) instead of text_stream
  */
 import Anthropic from '@anthropic-ai/sdk'
 
@@ -35,7 +35,7 @@ export function extractJson<T>(content: string): T {
   const start = s.indexOf('{')
   const end = s.lastIndexOf('}')
   if (start !== -1 && end > start) return JSON.parse(s.slice(start, end + 1)) as T
-  throw new Error(`Aucun JSON trouvé dans la réponse (${s.length} chars)`)
+  throw new Error(`No JSON found in response (${s.length} chars)`)
 }
 
 export async function callClaude(
@@ -87,7 +87,7 @@ export async function* callClaudeStreaming(
     ...(deep ? { thinking: { type: 'adaptive' } } : {}),
   })
 
-  // Itérer sur les événements SSE bruts
+  // Iterate over raw SSE events
   for await (const event of stream as AsyncIterable<Anthropic.MessageStreamEvent>) {
     if (
       event.type === 'content_block_delta' &&

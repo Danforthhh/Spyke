@@ -1,38 +1,38 @@
-// RÔLE ARCHITECTURAL : SPOKE 3 (Positioning Analyst)
-// Inputs  : competitor_name, apiKey, myProduct (données locales)
+// ARCHITECTURAL ROLE: SPOKE 3 (Positioning Analyst)
+// Inputs  : competitor_name, myProduct (local data)
 // Outputs : PositioningData JSON
-// Isolé   : Ne reçoit PAS les outputs des autres spokes
+// Isolated: does NOT receive outputs from other spokes
 
 import { callClaude, extractJson } from './claudeClient'
 import type { PositioningData, MyProduct } from '../types'
 
-const SYSTEM = `Tu es un expert en stratégie produit et positionnement SaaS B2B.
-Recherche les informations sur le concurrent via le web, puis compare avec les données produit fournies.
-Retourne UNIQUEMENT un objet JSON valide :
+const SYSTEM = `You are an expert in B2B SaaS product strategy and positioning.
+Search the web for information about the competitor, then compare with the provided product data.
+Return ONLY a valid JSON object:
 {
   "feature_gaps": [{"feature": "...", "competitor_has": bool, "we_have": bool, "priority": "high|medium|low", "note": "..."}],
-  "pricing_position": "description 1-2 phrases",
+  "pricing_position": "1-2 sentence description",
   "swot": {
-    "forces": ["force 1", "force 2", "force 3"],
-    "faiblesses": ["faiblesse 1", "faiblesse 2"],
-    "opportunites": ["opportunité 1", "opportunité 2"],
-    "menaces": ["menace 1", "menace 2"]
+    "strengths": ["strength 1", "strength 2", "strength 3"],
+    "weaknesses": ["weakness 1", "weakness 2"],
+    "opportunities": ["opportunity 1", "opportunity 2"],
+    "threats": ["threat 1", "threat 2"]
   }
 }
-Rien d'autre que le JSON.`
+Nothing other than the JSON.`
 
 export async function runPositioning(
   competitor: string,
   myProduct: MyProduct,
   onLog: (msg: string) => void,
 ): Promise<PositioningData> {
-  onLog(`Comparaison ${competitor} vs ${myProduct.name}...`)
+  onLog(`Comparing ${competitor} vs ${myProduct.name}...`)
   const content = await callClaude(
     SYSTEM,
-    `Concurrent : ${competitor}\n\nNotre produit :\n\`\`\`json\n${JSON.stringify(myProduct, null, 2)}\n\`\`\``,
+    `Competitor: ${competitor}\n\nOur product:\n\`\`\`json\n${JSON.stringify(myProduct, null, 2)}\n\`\`\``,
     true,
     onLog,
   )
-  onLog('Extraction JSON...')
+  onLog('Extracting JSON...')
   return extractJson<PositioningData>(content)
 }

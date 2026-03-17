@@ -19,9 +19,9 @@ export default function ApiKeyModal({ onSave }: Props) {
         <div style={{ marginBottom: 8, fontSize: 11, color: '#6c63ff', letterSpacing: 2, textTransform: 'uppercase' }}>
           Configuration
         </div>
-        <h2 style={{ margin: '0 0 8px', color: '#e0e0e0', fontSize: 22 }}>Clé API Anthropic</h2>
+        <h2 style={{ margin: '0 0 8px', color: '#e0e0e0', fontSize: 22 }}>Anthropic API Key</h2>
         <p style={{ margin: '0 0 24px', color: '#888', fontSize: 13, lineHeight: 1.6 }}>
-          Stockée uniquement dans votre navigateur (localStorage). Jamais envoyée ailleurs qu'à api.anthropic.com.
+          Stored only in your browser (localStorage). Never sent anywhere other than api.anthropic.com.
         </p>
         <input
           type="password"
@@ -46,10 +46,10 @@ export default function ApiKeyModal({ onSave }: Props) {
             transition: 'background 0.2s',
           }}
         >
-          Enregistrer et continuer
+          Save and continue
         </button>
         <p style={{ margin: '16px 0 0', fontSize: 11, color: '#555', textAlign: 'center' }}>
-          Obtenez une clé sur console.anthropic.com
+          Get a key at console.anthropic.com
         </p>
       </div>
     </div>

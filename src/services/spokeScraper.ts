@@ -1,33 +1,33 @@
-// RÔLE ARCHITECTURAL : SPOKE 1 (Web Scraper)
-// Inputs  : competitor_name, apiKey
+// ARCHITECTURAL ROLE: SPOKE 1 (Web Scraper)
+// Inputs  : competitor_name
 // Outputs : ScraperData JSON
-// Isolé   : Ne reçoit PAS les outputs des autres spokes
+// Isolated: does NOT receive outputs from other spokes
 
 import { callClaude, extractJson } from './claudeClient'
 import type { ScraperData } from '../types'
 
-const SYSTEM = `Tu es un analyste compétitif spécialisé dans les SaaS B2B.
-Recherche via le web les informations de pricing et fonctionnalités du concurrent.
-Cherche : page pricing officielle, page features, changelog récent.
-Retourne UNIQUEMENT un objet JSON valide :
+const SYSTEM = `You are a competitive analyst specializing in B2B SaaS.
+Search the web for pricing and feature information about the competitor.
+Look for: official pricing page, features page, recent changelog.
+Return ONLY a valid JSON object:
 {
   "pricing_tiers": [{"name": "...", "price_monthly": number|null, "key_features": ["..."]}],
   "features_list": ["..."],
-  "recent_updates": ["... (date si disponible)"]
+  "recent_updates": ["... (date if available)"]
 }
-Rien d'autre que le JSON.`
+Nothing other than the JSON.`
 
 export async function runScraper(
   competitor: string,
   onLog: (msg: string) => void,
 ): Promise<ScraperData> {
-  onLog(`Recherche pricing et features de ${competitor}...`)
+  onLog(`Fetching pricing and features for ${competitor}...`)
   const content = await callClaude(
     SYSTEM,
-    `Analyse le concurrent SaaS B2B : ${competitor}`,
+    `Analyze the B2B SaaS competitor: ${competitor}`,
     true,
     onLog,
   )
-  onLog('Extraction JSON...')
+  onLog('Extracting JSON...')
   return extractJson<ScraperData>(content)
 }
