@@ -1,5 +1,4 @@
 import { useState, useCallback } from 'react'
-import ApiKeyModal from './components/ApiKeyModal'
 import SpokeLog from './components/SpokeLog'
 import ReportPanel from './components/ReportPanel'
 import type { SpokesState, ScraperData, SentimentData, PositioningData } from './types'
@@ -17,8 +16,6 @@ const INITIAL_SPOKES: SpokesState = {
 }
 
 export default function App() {
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem('spyke_api_key') ?? '')
-  const [showKeyModal, setShowKeyModal] = useState(!localStorage.getItem('spyke_api_key'))
   const [competitor, setCompetitor] = useState('')
   const [spokes, setSpokes] = useState<SpokesState>(INITIAL_SPOKES)
   const [reportHtml, setReportHtml] = useState('')
@@ -45,12 +42,6 @@ export default function App() {
     }))
   }, [])
 
-  const handleSaveKey = (key: string) => {
-    localStorage.setItem('spyke_api_key', key)
-    setApiKey(key)
-    setShowKeyModal(false)
-  }
-
   const handleAnalyze = async () => {
     if (!competitor.trim() || running) return
     setRunning(true)
@@ -64,9 +55,9 @@ export default function App() {
     updateSpoke('positioning', { status: 'running' })
 
     const [scraperResult, sentimentResult, positioningResult] = await Promise.allSettled([
-      runScraper(competitor, apiKey, msg => addLog('scraper', msg)),
-      runSentiment(competitor, apiKey, msg => addLog('sentiment', msg)),
-      runPositioning(competitor, apiKey, DEFAULT_MY_PRODUCT, msg => addLog('positioning', msg)),
+      runScraper(competitor, msg => addLog('scraper', msg)),
+      runSentiment(competitor, msg => addLog('sentiment', msg)),
+      runPositioning(competitor, DEFAULT_MY_PRODUCT, msg => addLog('positioning', msg)),
     ])
 
     const scraper = scraperResult.status === 'fulfilled' ? scraperResult.value : null
@@ -88,7 +79,7 @@ export default function App() {
     setStreaming(true)
     let html = ''
     try {
-      for await (const chunk of runReport(competitor, apiKey, scraper, sentiment, positioning, DEFAULT_MY_PRODUCT)) {
+      for await (const chunk of runReport(competitor, scraper, sentiment, positioning, DEFAULT_MY_PRODUCT)) {
         html += chunk
         setReportHtml(html)
       }
@@ -111,7 +102,7 @@ export default function App() {
     let html = ''
     try {
       for await (const chunk of runReport(
-        competitor, apiKey,
+        competitor,
         lastResults.scraper, lastResults.sentiment, lastResults.positioning,
         DEFAULT_MY_PRODUCT, true,
       )) {
@@ -138,8 +129,6 @@ export default function App() {
         ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: #2a2a4a; border-radius: 2px; }
       `}</style>
 
-      {showKeyModal && <ApiKeyModal onSave={handleSaveKey} />}
-
       {/* Header */}
       <header style={{
         borderBottom: '1px solid #1e1e3a', padding: '20px 40px',
@@ -153,16 +142,6 @@ export default function App() {
             Competitive Intelligence
           </div>
         </div>
-        <button
-          onClick={() => setShowKeyModal(true)}
-          style={{
-            marginLeft: 'auto', padding: '6px 12px', background: 'transparent',
-            border: '1px solid #2a2a4a', borderRadius: 6, color: '#666',
-            fontSize: 11, cursor: 'pointer', fontFamily: 'monospace',
-          }}
-        >
-          API key ···
-        </button>
       </header>
 
       {/* Main */}
@@ -188,10 +167,10 @@ export default function App() {
             />
             <button
               onClick={handleAnalyze}
-              disabled={running || !competitor.trim() || !apiKey}
+              disabled={running || !competitor.trim()}
               style={{
                 padding: '14px 28px',
-                background: running || !competitor.trim() || !apiKey ? '#1e1e3a' : '#6c63ff',
+                background: running || !competitor.trim() ? '#1e1e3a' : '#6c63ff',
                 border: 'none', borderRadius: 8, color: running ? '#888' : '#fff',
                 fontSize: 14, fontWeight: 700, cursor: running ? 'not-allowed' : 'pointer',
                 transition: 'background 0.2s', whiteSpace: 'nowrap',

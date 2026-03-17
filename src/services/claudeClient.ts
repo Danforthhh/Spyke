@@ -1,5 +1,6 @@
 /**
- * Wrapper Anthropic SDK pour usage browser.
+ * Wrapper Anthropic SDK pour usage browser via Cloudflare Worker proxy.
+ * Les clés API sont stockées côté worker (secrets Cloudflare) — jamais dans le bundle.
  * Notes sur les casts :
  * - WEB_TOOLS : web_search/web_fetch sont des tools server-side non présents dans ToolUnion → cast any
  * - thinking adaptive : type 'adaptive' pas encore dans les types SDK → cast any
@@ -7,6 +8,10 @@
  * - Streaming : on utilise les events bruts (content_block_delta) au lieu de text_stream
  */
 import Anthropic from '@anthropic-ai/sdk'
+
+// TODO: Remplacer par l'URL du worker après `npx wrangler deploy` dans worker/
+// Format : https://ai-proxy.VOTRE_SUBDOMAIN.workers.dev
+const WORKER_URL = 'https://ai-proxy.danforthhh.workers.dev'
 
 export const MODEL_WEB = 'claude-sonnet-4-6'    // web_search/web_fetch (Haiku ne supporte pas)
 export const MODEL_REPORT = 'claude-haiku-4-5'  // rapport sans web tools
@@ -36,13 +41,12 @@ export function extractJson<T>(content: string): T {
 }
 
 export async function callClaude(
-  apiKey: string,
   system: string,
   user: string,
   useWeb = false,
   onLog?: (msg: string) => void,
 ): Promise<string> {
-  const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true })
+  const client = new Anthropic({ apiKey: 'via-worker', baseURL: `${WORKER_URL}/anthropic`, dangerouslyAllowBrowser: true })
   const model = useWeb ? MODEL_WEB : MODEL_REPORT
 
   const messages: Anthropic.MessageParam[] = [{ role: 'user', content: user }]
@@ -69,12 +73,11 @@ export async function callClaude(
 }
 
 export async function* callClaudeStreaming(
-  apiKey: string,
   system: string,
   user: string,
   deep = false,
 ): AsyncGenerator<string> {
-  const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true })
+  const client = new Anthropic({ apiKey: 'via-worker', baseURL: `${WORKER_URL}/anthropic`, dangerouslyAllowBrowser: true })
   const model = deep ? MODEL_DEEP : MODEL_REPORT
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

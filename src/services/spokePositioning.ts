@@ -23,13 +23,11 @@ Rien d'autre que le JSON.`
 
 export async function runPositioning(
   competitor: string,
-  apiKey: string,
   myProduct: MyProduct,
   onLog: (msg: string) => void,
 ): Promise<PositioningData> {
   onLog(`Comparaison ${competitor} vs ${myProduct.name}...`)
   const content = await callClaude(
-    apiKey,
     SYSTEM,
     `Concurrent : ${competitor}\n\nNotre produit :\n\`\`\`json\n${JSON.stringify(myProduct, null, 2)}\n\`\`\``,
     true,

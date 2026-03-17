@@ -20,12 +20,10 @@ Maximum 3 verbatims. Rien d'autre que le JSON.`
 
 export async function runSentiment(
   competitor: string,
-  apiKey: string,
   onLog: (msg: string) => void,
 ): Promise<SentimentData> {
   onLog(`Recherche avis G2, Capterra, Reddit pour ${competitor}...`)
   const content = await callClaude(
-    apiKey,
     SYSTEM,
     `Analyse les avis clients du concurrent SaaS B2B : ${competitor}`,
     true,

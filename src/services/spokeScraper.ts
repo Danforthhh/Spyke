@@ -19,12 +19,10 @@ Rien d'autre que le JSON.`
 
 export async function runScraper(
   competitor: string,
-  apiKey: string,
   onLog: (msg: string) => void,
 ): Promise<ScraperData> {
   onLog(`Recherche pricing et features de ${competitor}...`)
   const content = await callClaude(
-    apiKey,
     SYSTEM,
     `Analyse le concurrent SaaS B2B : ${competitor}`,
     true,

@@ -49,7 +49,6 @@ function buildPrompt(
 
 export async function* runReport(
   competitor: string,
-  apiKey: string,
   scraper: ScraperData | null,
   sentiment: SentimentData | null,
   positioning: PositioningData | null,
@@ -57,5 +56,5 @@ export async function* runReport(
   deep = false,
 ): AsyncGenerator<string> {
   const user = buildPrompt(competitor, scraper, sentiment, positioning, myProduct)
-  yield* callClaudeStreaming(apiKey, SYSTEM, user, deep)
+  yield* callClaudeStreaming(SYSTEM, user, deep)
 }
