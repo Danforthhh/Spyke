@@ -42,6 +42,14 @@ export default function App() {
     }))
   }, [])
 
+  const withTimeout = <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> =>
+    Promise.race([
+      promise,
+      new Promise<T>((_, reject) =>
+        setTimeout(() => reject(new Error(`${label} timeout (${ms / 1000}s)`)), ms)
+      ),
+    ])
+
   const handleAnalyze = async () => {
     if (!competitor.trim() || running) return
     setRunning(true)
@@ -54,10 +62,11 @@ export default function App() {
     updateSpoke('sentiment', { status: 'running' })
     updateSpoke('positioning', { status: 'running' })
 
+    const TIMEOUT = 90_000
     const [scraperResult, sentimentResult, positioningResult] = await Promise.allSettled([
-      runScraper(competitor, msg => addLog('scraper', msg)),
-      runSentiment(competitor, msg => addLog('sentiment', msg)),
-      runPositioning(competitor, DEFAULT_MY_PRODUCT, msg => addLog('positioning', msg)),
+      withTimeout(runScraper(competitor, msg => addLog('scraper', msg)), TIMEOUT, 'Scraper'),
+      withTimeout(runSentiment(competitor, msg => addLog('sentiment', msg)), TIMEOUT, 'Sentiment'),
+      withTimeout(runPositioning(competitor, DEFAULT_MY_PRODUCT, msg => addLog('positioning', msg)), TIMEOUT, 'Positioning'),
     ])
 
     const scraper = scraperResult.status === 'fulfilled' ? scraperResult.value : null
