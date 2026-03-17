@@ -82,6 +82,52 @@ python -m pytest tests/
 
 ---
 
+## Frontend Web (React + TypeScript)
+
+L'interface web est déployée sur GitHub Pages : **[danforthhh.github.io/Spyke](https://danforthhh.github.io/Spyke/)**
+
+### Setup local
+
+```bash
+npm install
+cp .env.example .env.local
+# Renseigner VITE_WORKER_URL dans .env.local
+
+npm run dev   # http://localhost:5173
+```
+
+### Variables d'environnement
+
+| Variable | Description | Exemple |
+|---|---|---|
+| `VITE_WORKER_URL` | URL du Cloudflare Worker proxy | `https://spyke.xxx.workers.dev` |
+
+### Cloudflare Worker (proxy API)
+
+Le worker stocke les clés API côté serveur — elles ne sont jamais dans le bundle JS.
+
+```bash
+cd worker/
+
+# Déployer le code
+npx wrangler login
+npx wrangler deploy
+
+# Configurer les secrets (une seule fois)
+npx wrangler secret put ANTHROPIC_API_KEY
+
+# Mettre à jour VITE_WORKER_URL dans .env.local avec l'URL affichée
+```
+
+### Déploiement GitHub Pages
+
+```bash
+npm run build
+npx gh-pages -d dist
+```
+
+---
+
 ## Fichiers sensibles (dans `.gitignore`)
 
 | Fichier | Contenu |
