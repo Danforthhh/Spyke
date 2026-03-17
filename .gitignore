@@ -5,3 +5,8 @@
 # Frontend
 node_modules/
 dist/
+
+# Python leftovers
+__pycache__/
+*.pyc
+outputs/
