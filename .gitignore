@@ -1,23 +1,7 @@
-# Données sensibles — ne jamais commiter
+# Sensitive — never commit
 .env
 .env.local
-my_product.json
-outputs/
 
 # Frontend
 node_modules/
 dist/
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
-.venv/
-venv/
-env/
-*.egg-info/
-dist/
-build/
-.pytest_cache/
