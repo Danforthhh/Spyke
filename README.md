@@ -1,8 +1,8 @@
 # Spyke — Competitive Intelligence Pipeline
 
-Pipeline d'analyse compétitive multi-agents en Python, architecture **Hub-and-Spoke** explicite.
+A multi-agent competitive analysis pipeline in Python with an explicit **Hub-and-Spoke** architecture.
 
-Entrez le nom d'un concurrent SaaS B2B → recevez un rapport HTML complet avec pricing, avis clients, SWOT et recommandations.
+Enter a SaaS B2B competitor name → receive a full HTML report with pricing, customer reviews, SWOT and recommendations.
 
 ---
 
@@ -13,7 +13,7 @@ Entrez le nom d'un concurrent SaaS B2B → recevez un rapport HTML complet avec 
                     │   HUB           │
                     │ hub_coordinator │
                     └────────┬────────┘
-                             │ asyncio.gather() — isolation totale
+                             │ asyncio.gather() — full isolation
            ┌─────────────────┼─────────────────┐
            │                 │                 │
     ┌──────▼──────┐  ┌───────▼──────┐  ┌──────▼──────────┐
@@ -22,7 +22,7 @@ Entrez le nom d'un concurrent SaaS B2B → recevez un rapport HTML complet avec 
     │  (Sonnet)   │  │  (Sonnet)    │  │  (Sonnet)       │
     └──────┬──────┘  └───────┬──────┘  └──────┬──────────┘
            └─────────────────┼─────────────────┘
-                             │ outputs collectés par le HUB
+                             │ outputs collected by the HUB
                     ┌────────▼────────┐
                     │   SPOKE 4       │
                     │  Report Writer  │
@@ -30,12 +30,12 @@ Entrez le nom d'un concurrent SaaS B2B → recevez un rapport HTML complet avec 
                     └─────────────────┘
 ```
 
-| Composant | Modèle | Rôle |
+| Component | Model | Role |
 |---|---|---|
 | Spoke 1 — Scraper | Sonnet 4.6 + web search | Pricing, features, recent updates |
-| Spoke 2 — Sentiment | Sonnet 4.6 + web search | Avis G2, Capterra, Reddit |
-| Spoke 3 — Positioning | Sonnet 4.6 + web search | SWOT vs votre produit |
-| Spoke 4 — Report | Haiku 4.5 (ou Opus 4.6 en mode deep) | Rapport HTML |
+| Spoke 2 — Sentiment | Sonnet 4.6 + web search | G2, Capterra, Reddit reviews |
+| Spoke 3 — Positioning | Sonnet 4.6 + web search | SWOT vs your product |
+| Spoke 4 — Report | Haiku 4.5 (or Opus 4.6 in deep mode) | HTML report |
 
 ---
 
@@ -48,10 +48,10 @@ cd Spyke
 pip install -r requirements.txt
 
 cp .env.example .env
-# Renseigner ANTHROPIC_API_KEY dans .env
+# Fill in ANTHROPIC_API_KEY in .env
 
 cp my_product.example.json my_product.json
-# Renseigner les données de votre produit dans my_product.json
+# Fill in your product data in my_product.json
 ```
 
 ---
@@ -59,14 +59,14 @@ cp my_product.example.json my_product.json
 ## Usage
 
 ```bash
-# Analyse standard (Haiku — rapide, ~2-3min)
+# Standard analysis (Haiku — fast, ~2-3min)
 python hub_coordinator.py "HubSpot"
 
-# Le rapport HTML s'ouvre automatiquement dans votre navigateur
-# Puis le programme propose un rapport approfondi avec Opus 4.6
+# The HTML report opens automatically in your browser
+# The program then offers a deeper report with Opus 4.6
 ```
 
-### Tests d'un spoke individuel
+### Test an individual spoke
 
 ```bash
 python spoke_scraper.py "Salesforce"
@@ -74,7 +74,7 @@ python spoke_sentiment.py "Salesforce"
 python spoke_positioning.py "Salesforce"
 ```
 
-### Tests unitaires (sans appels API)
+### Unit tests (no API calls)
 
 ```bash
 python -m pytest tests/
@@ -82,44 +82,44 @@ python -m pytest tests/
 
 ---
 
-## Frontend Web (React + TypeScript)
+## Web Frontend (React + TypeScript)
 
-L'interface web est déployée sur GitHub Pages : **[danforthhh.github.io/Spyke](https://danforthhh.github.io/Spyke/)**
+The web interface is deployed on GitHub Pages: **[danforthhh.github.io/Spyke](https://danforthhh.github.io/Spyke/)**
 
-### Setup local
+### Local setup
 
 ```bash
 npm install
 cp .env.example .env.local
-# Renseigner VITE_WORKER_URL dans .env.local
+# Fill in VITE_WORKER_URL in .env.local
 
 npm run dev   # http://localhost:5173
 ```
 
-### Variables d'environnement
+### Environment variables
 
-| Variable | Description | Exemple |
+| Variable | Description | Example |
 |---|---|---|
-| `VITE_WORKER_URL` | URL du Cloudflare Worker proxy | `https://spyke.xxx.workers.dev` |
+| `VITE_WORKER_URL` | Cloudflare Worker proxy URL | `https://spyke.xxx.workers.dev` |
 
-### Cloudflare Worker (proxy API)
+### Cloudflare Worker (API proxy)
 
-Le worker stocke les clés API côté serveur — elles ne sont jamais dans le bundle JS.
+The worker stores API keys server-side — they are never included in the JS bundle.
 
 ```bash
 cd worker/
 
-# Déployer le code
+# Deploy the code
 npx wrangler login
 npx wrangler deploy
 
-# Configurer les secrets (une seule fois)
+# Set secrets (one-time)
 npx wrangler secret put ANTHROPIC_API_KEY
 
-# Mettre à jour VITE_WORKER_URL dans .env.local avec l'URL affichée
+# Update VITE_WORKER_URL in .env.local with the displayed URL
 ```
 
-### Déploiement GitHub Pages
+### Deploy to GitHub Pages
 
 ```bash
 npm run build
@@ -128,23 +128,23 @@ npx gh-pages -d dist
 
 ---
 
-## Fichiers sensibles (dans `.gitignore`)
+## Sensitive files (in `.gitignore`)
 
-| Fichier | Contenu |
+| File | Content |
 |---|---|
-| `.env` | Clé API Anthropic |
-| `my_product.json` | Données réelles de votre produit |
-| `outputs/` | Rapports générés |
+| `.env` | Anthropic API key |
+| `my_product.json` | Your real product data |
+| `outputs/` | Generated reports |
 
 ---
 
-## Décisions techniques
+## Technical decisions
 
-| Sujet | Décision | Raison |
+| Topic | Decision | Reason |
 |---|---|---|
-| Web tools | Sonnet 4.6 requis | Haiku 4.5 ne supporte pas web_search/web_fetch |
-| Rapport initial | Haiku 4.5 | Pas besoin du web, 10x moins cher |
-| Mode deep | Opus 4.6 + thinking adaptatif | Proposé interactivement après rapport Haiku |
-| Parallélisme | asyncio.gather() | Isolation totale — chaque spoke ne reçoit que competitor_name |
-| Prompt caching | cache_control ephemeral | Réduction des coûts sur analyses répétées |
-| Format rapport | HTML | Rendu riche, tables, SWOT coloré, partage facile |
+| Web tools | Sonnet 4.6 required | Haiku 4.5 does not support web_search/web_fetch |
+| Initial report | Haiku 4.5 | No web needed, 10x cheaper |
+| Deep mode | Opus 4.6 + adaptive thinking | Offered interactively after the Haiku report |
+| Parallelism | asyncio.gather() | Full isolation — each spoke only receives competitor_name |
+| Prompt caching | cache_control ephemeral | Reduces cost on repeated analyses |
+| Report format | HTML | Rich rendering, tables, colored SWOT, easy to share |

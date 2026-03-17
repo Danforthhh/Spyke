@@ -1,81 +1,79 @@
-# Spyke — Règles architecturales
+# Spyke — Architectural rules
 
-## Architecture : HUB-AND-SPOKE
+## Architecture: HUB-AND-SPOKE
 
-Ce projet implémente un pipeline d'analyse compétitive multi-agents avec une architecture
-Hub-and-Spoke **explicite**. Chaque composant a un rôle unique et non négociable.
+This project implements a multi-agent competitive analysis pipeline with an **explicit** Hub-and-Spoke architecture. Each component has a unique and non-negotiable role.
 
-### Le HUB (`hub_coordinator.py`)
-- **Responsabilité UNIQUE** : recevoir l'input, dispatcher aux spokes en parallèle,
-  collecter les résultats, appeler le spoke de synthèse.
-- Le hub **NE fait PAS** d'analyse lui-même.
-- Le hub **NE communique PAS** les résultats d'un spoke à un autre spoke.
-- Chaque spoke travaille de façon **ISOLÉE**.
+### The HUB (`hub_coordinator.py`)
+- **SINGLE responsibility**: receive input, dispatch to spokes in parallel, collect results, call the synthesis spoke.
+- The hub **does NOT** perform analysis itself.
+- The hub **does NOT** pass one spoke's results to another spoke.
+- Each spoke works in **ISOLATION**.
 
-### Les SPOKES
-| Fichier | Rôle | Input | Output |
+### The SPOKES
+| File | Role | Input | Output |
 |---|---|---|---|
 | `spoke_scraper.py` | Web Scraper | `competitor_name` | `{pricing_tiers, features_list, recent_updates}` |
 | `spoke_sentiment.py` | Sentiment Analyst | `competitor_name` | `{avg_score, top_complaints, top_praises, sample_quotes}` |
 | `spoke_positioning.py` | Positioning Analyst | `competitor_name` + `my_product.json` | `{feature_gaps, pricing_position, swot}` |
-| `spoke_report.py` | Report Writer | outputs des 3 spokes (via hub) | rapport HTML |
+| `spoke_report.py` | Report Writer | outputs from 3 spokes (via hub) | HTML report |
 
-### Règles absolues
-1. Un spoke ne reçoit **jamais** l'output d'un autre spoke.
-2. Le hub ne fait **jamais** d'appel Claude directement.
-3. Chaque spoke loggue : début, fin, token count.
-4. Si un spoke échoue, le hub continue et mentionne l'échec dans le rapport.
+### Absolute rules
+1. A spoke **never** receives another spoke's output.
+2. The hub **never** makes a direct Claude call.
+3. Each spoke logs: start, end, token count.
+4. If a spoke fails, the hub continues and mentions the failure in the report.
 
 ---
 
-## Variables d'environnement requises
+## Required environment variables
 
 ```bash
-ANTHROPIC_API_KEY=sk-ant-...   # Clé API Anthropic (dans .env, jamais commitée)
+ANTHROPIC_API_KEY=sk-ant-...   # Anthropic API key (in .env, never committed)
 ```
 
-Copier `.env.example` → `.env` et renseigner la clé.
+Copy `.env.example` → `.env` and fill in the key.
 
 ---
 
-## Modèles utilisés
+## Models used
 
-| Mode | Modèle | Usage |
+| Mode | Model | Usage |
 |---|---|---|
-| Standard (défaut) | `claude-haiku-4-5` | Spokes 1-3 + rapport initial |
-| Deep (`--deep` / interactif) | `claude-opus-4-6` + adaptive thinking | Rapport approfondi uniquement |
+| Standard (default) | `claude-haiku-4-5` | Spokes 1-3 + initial report |
+| Deep (`--deep` / interactive) | `claude-opus-4-6` + adaptive thinking | Deep report only |
 
-**Décision** : Haiku pour la première passe (rapide, ~15s, 10x moins cher).
-Opus proposé après le rapport Haiku si l'utilisateur veut approfondir.
+**Decision**: Haiku for the first pass (fast, ~15s, 10x cheaper).
+Opus offered after the Haiku report if the user wants to go deeper.
 
 ---
 
-## Commandes d'usage
+## Usage commands
 
 ```bash
-# Installation
+# Setup
 pip install -r requirements.txt
-cp .env.example .env          # puis renseigner ANTHROPIC_API_KEY
-cp my_product.example.json my_product.json  # puis renseigner votre produit
+cp .env.example .env          # then fill in ANTHROPIC_API_KEY
+cp my_product.example.json my_product.json  # then fill in your product data
 
-# Analyse d'un concurrent
+# Analyze a competitor
 python hub_coordinator.py "HubSpot"
 
-# Test d'un spoke individuel
+# Test an individual spoke
 python spoke_scraper.py "Salesforce"
 python spoke_sentiment.py "Salesforce"
 python spoke_positioning.py "Salesforce"
 
-# Tests unitaires
+# Unit tests
 python -m pytest tests/
 ```
 
 ---
 
-## Données sensibles — NE JAMAIS COMMITER
+## Sensitive files — NEVER COMMIT
 
-| Fichier | Contenu sensible |
+| File | Sensitive content |
 |---|---|
-| `.env` | Clé API Anthropic |
-| `my_product.json` | Données réelles du produit (pricing, roadmap, positionnement) |
-| `outputs/` | Rapports générés (intelligence compétitive) |
+| `.env` | Anthropic API key |
+| `my_product.json` | Real product data (pricing, roadmap, positioning) |
+| `outputs/` | Generated reports (competitive intelligence) |
