@@ -9,9 +9,7 @@
  */
 import Anthropic from '@anthropic-ai/sdk'
 
-// TODO: Remplacer par l'URL du worker après `npx wrangler deploy` dans worker/
-// Format : https://ai-proxy.VOTRE_SUBDOMAIN.workers.dev
-const WORKER_URL = 'https://spyke.vin-bories.workers.dev'
+const WORKER_URL = import.meta.env.VITE_WORKER_URL as string
 
 export const MODEL_WEB = 'claude-sonnet-4-6'    // web_search/web_fetch (Haiku ne supporte pas)
 export const MODEL_REPORT = 'claude-haiku-4-5'  // rapport sans web tools

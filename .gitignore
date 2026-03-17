@@ -1,5 +1,6 @@
 # Données sensibles — ne jamais commiter
 .env
+.env.local
 my_product.json
 outputs/
 
