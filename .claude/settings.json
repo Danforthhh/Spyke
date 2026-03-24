@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "timeout": 60,
+            "statusMessage": "Running TypeScript check before push...",
+            "command": "cmd=$(node -e \"let d='';process.stdin.resume();process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).tool_input.command||'')}catch(e){console.log('')}})\"); if echo \"$cmd\" | grep -qE '\\bgit push\\b'; then out=$(cd /c/Code/Spyke && npx tsc --noEmit 2>&1); rc=$?; if [ $rc -ne 0 ]; then node -e \"console.log(JSON.stringify({continue:false,stopReason:'TypeScript check failed — fix errors before pushing:\\n\\n'+process.argv[1]}))\" \"$out\"; exit 1; fi; fi"
+          }
+        ]
+      }
+    ]
+  }
+}
