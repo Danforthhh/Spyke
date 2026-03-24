@@ -10,17 +10,17 @@ Generate a complete, self-contained HTML report (inline CSS) ready for presentat
 
 Required structure:
 1. Executive Summary (5 lines max)
-2. Pricing Analysis (HTML comparison table)
+2. Pricing Analysis (comparison table: competitor tiers vs our tiers — use "Our Product" section data directly, never say "spoke failed" for our pricing)
 3. Feature Comparison Table (Feature | Us | Competitor | Priority)
-4. SWOT (4 colored quadrants)
-5. Strategic Recommendations (exactly 3 bullets)
+4. Competitor SWOT (the COMPETITOR's strengths/weaknesses/opportunities/threats — NOT ours)
+5. Strategic Recommendations for us (exactly 3 bullets)
 
 Style:
 - Font: system-ui, sans-serif; max-width 900px centered
 - Header: background #1a1a2e, white text
-- SWOT colors: Strengths=#d4edda, Weaknesses=#f8d7da, Opportunities=#cce5ff, Threats=#fff3cd
+- SWOT: strict 2×2 CSS grid (display:grid; grid-template-columns:1fr 1fr; gap:16px)
+  Colors: Strengths=#d4edda, Weaknesses=#f8d7da, Opportunities=#cce5ff, Threats=#fff3cd
 - Tables with alternating row colors
-- Note if any data is missing (spoke failed)
 Return ONLY the complete HTML, starting with <!DOCTYPE html>.`
 
 function buildPrompt(
@@ -30,7 +30,10 @@ function buildPrompt(
   positioning: PositioningData | null,
   myProduct: MyProduct,
 ): string {
-  const parts = [`# Report: ${competitor} | Our product: ${myProduct.name}\n`]
+  const parts = [
+    `# Report: ${competitor} vs ${myProduct.name}\n`,
+    `## Our Product (use this data directly — do NOT say "spoke failed")\n\`\`\`json\n${JSON.stringify(myProduct, null, 2)}\n\`\`\``,
+  ]
 
   parts.push(scraper
     ? `## Spoke 1 — Pricing & Features\n\`\`\`json\n${JSON.stringify(scraper, null, 2)}\n\`\`\``
