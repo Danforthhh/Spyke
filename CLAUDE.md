@@ -82,7 +82,7 @@ Spokes 1–3 send `web_search_20260209` + `web_fetch_20260209` tools. In DEV mod
 ## Streaming (Spoke 4)
 - `callClaudeStreaming()` uses `client.messages.stream()`, yields `content_block_delta` text events
 - `ReportPanel` debounces `srcDoc` updates to 400ms intervals (prevents O(n²) DOM reflows)
-- iframe has `sandbox="allow-same-origin allow-scripts"` — scripts in generated reports are allowed
+- iframe has `sandbox="allow-scripts"` — `allow-same-origin` is intentionally omitted to prevent iframe scripts from accessing parent frame DOM/cookies (XSS mitigation)
 
 ## Pre-push checklist
 1. `npx tsc --noEmit` — automated via `.claude/settings.json` hook; blocks push on TypeScript errors
