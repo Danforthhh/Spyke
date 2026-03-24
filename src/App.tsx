@@ -7,6 +7,7 @@ import { runScraper } from './services/spokeScraper'
 import { runSentiment } from './services/spokeSentiment'
 import { runPositioning } from './services/spokePositioning'
 import { runReport } from './services/spokeReport'
+import DevModeToggle from './components/DevModeToggle'
 
 const INITIAL_SPOKES: SpokesState = {
   scraper: { status: 'idle', log: [] },
@@ -130,6 +131,7 @@ export default function App() {
 
   return (
     <>
+      <DevModeToggle />
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #0f0f23; color: #e0e0e0; font-family: system-ui, sans-serif; }

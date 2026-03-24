@@ -9,7 +9,18 @@
  */
 import Anthropic from '@anthropic-ai/sdk'
 
-const WORKER_URL = import.meta.env.VITE_WORKER_URL as string
+// PROD: Cloudflare Worker (API keys stored as secrets — never in the bundle)
+// DEV:  local proxy at localhost:8788 — free Ollama + Brave Search
+// Switch via the DEV/PROD toggle in the UI (persisted to localStorage).
+const WORKER_URL_PROD = 'https://spyke.vin-bories.workers.dev'
+const WORKER_URL_DEV  = 'http://localhost:8788'
+const getWorkerUrl = () =>
+  localStorage.getItem('devMode') === 'true' ? WORKER_URL_DEV : WORKER_URL_PROD
+
+// Returns a fresh client on every call so the URL is always up-to-date with the toggle
+function getClient() {
+  return new Anthropic({ apiKey: 'via-worker', baseURL: `${getWorkerUrl()}/anthropic`, dangerouslyAllowBrowser: true })
+}
 
 export const MODEL_WEB = 'claude-sonnet-4-6'    // web_search/web_fetch (Haiku ne supporte pas)
 export const MODEL_REPORT = 'claude-haiku-4-5'  // rapport sans web tools
@@ -44,7 +55,7 @@ export async function callClaude(
   useWeb = false,
   onLog?: (msg: string) => void,
 ): Promise<string> {
-  const client = new Anthropic({ apiKey: 'via-worker', baseURL: `${WORKER_URL}/anthropic`, dangerouslyAllowBrowser: true })
+  const client = getClient()
   const model = useWeb ? MODEL_WEB : MODEL_REPORT
 
   const messages: Anthropic.MessageParam[] = [{ role: 'user', content: user }]
@@ -75,7 +86,7 @@ export async function* callClaudeStreaming(
   user: string,
   deep = false,
 ): AsyncGenerator<string> {
-  const client = new Anthropic({ apiKey: 'via-worker', baseURL: `${WORKER_URL}/anthropic`, dangerouslyAllowBrowser: true })
+  const client = getClient()
   const model = deep ? MODEL_DEEP : MODEL_REPORT
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
