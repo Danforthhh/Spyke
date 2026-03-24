@@ -79,7 +79,7 @@ export default function App() {
     updateSpoke('sentiment', { status: 'running' })
     updateSpoke('positioning', { status: 'running' })
 
-    const TIMEOUT = 90_000
+    const TIMEOUT = 150_000
     const [scraperResult, sentimentResult, positioningResult] = await Promise.allSettled([
       withTimeout(runScraper(competitor, msg => addLog('scraper', msg)), TIMEOUT, 'Scraper'),
       withTimeout(runSentiment(competitor, msg => addLog('sentiment', msg)), TIMEOUT, 'Sentiment'),
@@ -102,7 +102,20 @@ export default function App() {
     setLastResults({ scraper, sentiment, positioning })
 
     // Spoke 4: report (streaming)
+    const failedCount = [scraper, sentiment, positioning].filter(r => r === null).length
+
+    if (failedCount === 3) {
+      updateSpoke('report', { status: 'error' })
+      addLog('report', 'All 3 research spokes failed — nothing to write a report from.')
+      addLog('report', 'Cause: Groq rate limits (free tier). Wait 1 min and retry, or switch to PROD mode for full quality.')
+      setRunning(false)
+      return
+    }
+
     updateSpoke('report', { status: 'running' })
+    if (failedCount > 0) {
+      addLog('report', `⚠ ${failedCount}/3 research spokes failed — report will have gaps`)
+    }
     setStreaming(true)
     let html = ''
     try {
