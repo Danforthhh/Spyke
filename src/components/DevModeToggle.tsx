@@ -71,16 +71,16 @@ export default function DevModeToggle() {
     pillClass = 'bg-blue-600 hover:bg-blue-700'
   } else if (offline) {
     label     = '⚠ Proxy offline'
-    title     = `DEV mode active but proxy is not running.\nStart it: cd /c/Code/dev-proxy && node index.js`
+    title     = `DEV mode active but Cloudflare Worker is unreachable.\nCheck: https://dev-proxy.vin-bories.workers.dev/stats`
     pillClass = 'bg-red-600 hover:bg-red-700'
   } else if (stats) {
     const reset = formatResetDate(stats.resetDate)
     label     = `🔧 DEV · ${searches}/${stats.limit} 🔍 · resets ${reset}`
-    title     = `DEV mode — free local AI (Ollama + Tavily)\n${stats.tavilySearches} Tavily / ${stats.ddgSearches} DDG searches this month\n${stats.remaining} Tavily searches remaining · resets ${reset}\nClick to switch to PROD`
+    title     = `DEV mode — free Groq + Tavily (Cloudflare Worker)\n${stats.tavilySearches} Tavily / ${stats.ddgSearches} DDG searches this month\n${stats.remaining} Tavily searches remaining · resets ${reset}\nClick to switch to PROD`
     pillClass = 'bg-green-700 hover:bg-green-800'
   } else {
     label     = '🔧 DEV'
-    title     = 'DEV mode — free local AI (Ollama)\nClick to switch to PROD'
+    title     = 'DEV mode — free Groq + Tavily (Cloudflare Worker)\nClick to switch to PROD'
     pillClass = 'bg-green-700 hover:bg-green-800'
   }
 
