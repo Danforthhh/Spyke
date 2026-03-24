@@ -71,7 +71,7 @@ export async function callClaude(
       ...(useWeb ? { tools: WEB_TOOLS } : {}),
     }) as Anthropic.Message
 
-    onLog?.(`tokens in=${response.usage.input_tokens} out=${response.usage.output_tokens}`)
+    onLog?.(`tokens in=${response.usage?.input_tokens ?? '?'} out=${response.usage?.output_tokens ?? '?'}`)
     fullText += extractText(response.content)
 
     if ((response.stop_reason as string) !== 'pause_turn') break

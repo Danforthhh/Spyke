@@ -53,10 +53,12 @@ export default function App() {
   }, [])
 
   const addLog = useCallback((spoke: keyof SpokesState, msg: string) => {
-    setSpokes(prev => ({
-      ...prev,
-      [spoke]: { ...prev[spoke], log: [...prev[spoke].log, msg] },
-    }))
+    setSpokes(prev => {
+      const log = prev[spoke].log
+      // Cap at 100 entries to prevent unbounded memory growth during long runs
+      const trimmed = log.length >= 100 ? log.slice(-99) : log
+      return { ...prev, [spoke]: { ...prev[spoke], log: [...trimmed, msg] } }
+    })
   }, [])
 
   const withTimeout = <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> =>
@@ -70,6 +72,8 @@ export default function App() {
   const handleAnalyze = async () => {
     if (!competitor.trim() || running) return
     setRunning(true)
+    // Snapshot product config at analysis start — prevents mid-analysis edits from corrupting results
+    const productSnapshot: MyProduct = JSON.parse(JSON.stringify(myProduct))
     setSpokes(INITIAL_SPOKES)
     setReportHtml('')
     setLastResults(null)
@@ -83,7 +87,7 @@ export default function App() {
     const [scraperResult, sentimentResult, positioningResult] = await Promise.allSettled([
       withTimeout(runScraper(competitor, msg => addLog('scraper', msg)), TIMEOUT, 'Scraper'),
       withTimeout(runSentiment(competitor, msg => addLog('sentiment', msg)), TIMEOUT, 'Sentiment'),
-      withTimeout(runPositioning(competitor, myProduct, msg => addLog('positioning', msg)), TIMEOUT, 'Positioning'),
+      withTimeout(runPositioning(competitor, productSnapshot, msg => addLog('positioning', msg)), TIMEOUT, 'Positioning'),
     ])
 
     const scraper = scraperResult.status === 'fulfilled' ? scraperResult.value : null
@@ -119,14 +123,14 @@ export default function App() {
     setStreaming(true)
     let html = ''
     try {
-      for await (const chunk of runReport(competitor, scraper, sentiment, positioning, myProduct)) {
+      for await (const chunk of runReport(competitor, scraper, sentiment, positioning, productSnapshot)) {
         html += chunk
         setReportHtml(html)
       }
       updateSpoke('report', { status: 'done' })
     } catch (e) {
       updateSpoke('report', { status: 'error' })
-      addLog('report', `Error: ${e}`)
+      addLog('report', `Error: ${e instanceof Error ? e.message : String(e)}`)
     }
     setStreaming(false)
     setRunning(false)
@@ -152,7 +156,7 @@ export default function App() {
       updateSpoke('report', { status: 'done' })
     } catch (e) {
       updateSpoke('report', { status: 'error' })
-      addLog('report', `Error: ${e}`)
+      addLog('report', `Error: ${e instanceof Error ? e.message : String(e)}`)
     }
     setStreaming(false)
     setDeepLoading(false)

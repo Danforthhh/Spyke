@@ -49,7 +49,7 @@ export default function ReportPanel({ html, streaming, onDeepAnalysis, deepLoadi
             borderRadius: 8, background: '#fff',
           }}
           title="Competitive report"
-          sandbox="allow-same-origin allow-scripts"
+          sandbox="allow-scripts"
         />
       )}
 
