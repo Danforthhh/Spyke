@@ -48,6 +48,8 @@ Each spoke → claudeClient.ts → getClient() → getWorkerUrl()
 | `src/components/DevModeToggle.tsx` | DEV/PROD toggle pill — polls `/stats` every 5s |
 | `src/components/SpokeLog.tsx` | Spoke status + log display — red banner on error |
 | `src/components/ReportPanel.tsx` | Iframe report display — debounced streaming, `allow-scripts` sandbox |
+| `.claude/agents/code-reviewer.md` | Read-only pre-deploy code reviewer — edit to change what gets flagged |
+| `.claude/settings.json` | Two PreToolUse hooks: TS check on push, code review on deploy |
 
 ## DEV/PROD toggle
 - `localStorage.devMode === 'true'` → DEV (free, online CF Worker)
@@ -83,9 +85,18 @@ Spokes 1–3 send `web_search_20260209` + `web_fetch_20260209` tools. In DEV mod
 - iframe has `sandbox="allow-same-origin allow-scripts"` — scripts in generated reports are allowed
 
 ## Pre-push checklist
-1. `npx tsc --noEmit` (automated via `.claude/settings.json` hook — blocks push on failure)
+1. `npx tsc --noEmit` — automated via `.claude/settings.json` hook; blocks push on TypeScript errors
 2. Update this CLAUDE.md if architecture changed
-3. `npm run deploy` to publish to GitHub Pages
+3. `npm run deploy` — triggers isolated code-reviewer agent (`.claude/agents/code-reviewer.md`) before building; blocks on CRITICAL findings, then publishes to GitHub Pages
+4. `git push`
+
+## Automated quality gates
+| Trigger | Hook type | Effect |
+|---------|-----------|--------|
+| `git push` | `command` PreToolUse | Runs `npx tsc --noEmit`, blocks on error |
+| `npm run deploy` | `agent` PreToolUse | Runs code reviewer, blocks on CRITICAL issues |
+
+To update review criteria: edit `.claude/agents/code-reviewer.md` — no `settings.json` change needed.
 
 ---
 

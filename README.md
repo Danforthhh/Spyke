@@ -54,8 +54,10 @@ No API keys needed locally — the app routes through a Cloudflare Worker.
 ## Deploy to GitHub Pages
 
 ```bash
-npm run deploy   # builds + publishes via gh-pages
+npm run deploy   # triggers code review → builds → publishes via gh-pages
 ```
+
+Before building, an isolated code-reviewer agent (`.claude/agents/code-reviewer.md`) scans recently changed files for critical bugs and security issues. It blocks the deploy if anything critical is found. To update what gets reviewed, edit `.claude/agents/code-reviewer.md`.
 
 ---
 
