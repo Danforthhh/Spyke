@@ -1,13 +1,27 @@
 import { useState, useCallback } from 'react'
 import SpokeLog from './components/SpokeLog'
 import ReportPanel from './components/ReportPanel'
-import type { SpokesState, ScraperData, SentimentData, PositioningData } from './types'
+import type { SpokesState, ScraperData, SentimentData, PositioningData, MyProduct } from './types'
 import { DEFAULT_MY_PRODUCT } from './types'
 import { runScraper } from './services/spokeScraper'
 import { runSentiment } from './services/spokeSentiment'
 import { runPositioning } from './services/spokePositioning'
 import { runReport } from './services/spokeReport'
 import DevModeToggle from './components/DevModeToggle'
+
+const LS_KEY = 'spyke_my_product'
+
+function loadMyProduct(): MyProduct {
+  try {
+    const raw = localStorage.getItem(LS_KEY)
+    if (raw) return { ...DEFAULT_MY_PRODUCT, ...JSON.parse(raw) }
+  } catch { /* ignore */ }
+  return DEFAULT_MY_PRODUCT
+}
+
+function saveMyProduct(p: MyProduct) {
+  localStorage.setItem(LS_KEY, JSON.stringify(p))
+}
 
 const INITIAL_SPOKES: SpokesState = {
   scraper: { status: 'idle', log: [] },
@@ -23,6 +37,8 @@ export default function App() {
   const [streaming, setStreaming] = useState(false)
   const [deepLoading, setDeepLoading] = useState(false)
   const [running, setRunning] = useState(false)
+  const [myProduct, setMyProduct] = useState<MyProduct>(loadMyProduct)
+  const [showProductConfig, setShowProductConfig] = useState(false)
   const [lastResults, setLastResults] = useState<{
     scraper: ScraperData | null
     sentiment: SentimentData | null
@@ -67,7 +83,7 @@ export default function App() {
     const [scraperResult, sentimentResult, positioningResult] = await Promise.allSettled([
       withTimeout(runScraper(competitor, msg => addLog('scraper', msg)), TIMEOUT, 'Scraper'),
       withTimeout(runSentiment(competitor, msg => addLog('sentiment', msg)), TIMEOUT, 'Sentiment'),
-      withTimeout(runPositioning(competitor, DEFAULT_MY_PRODUCT, msg => addLog('positioning', msg)), TIMEOUT, 'Positioning'),
+      withTimeout(runPositioning(competitor, myProduct, msg => addLog('positioning', msg)), TIMEOUT, 'Positioning'),
     ])
 
     const scraper = scraperResult.status === 'fulfilled' ? scraperResult.value : null
@@ -90,7 +106,7 @@ export default function App() {
     setStreaming(true)
     let html = ''
     try {
-      for await (const chunk of runReport(competitor, scraper, sentiment, positioning, DEFAULT_MY_PRODUCT)) {
+      for await (const chunk of runReport(competitor, scraper, sentiment, positioning, myProduct)) {
         html += chunk
         setReportHtml(html)
       }
@@ -115,7 +131,7 @@ export default function App() {
       for await (const chunk of runReport(
         competitor,
         lastResults.scraper, lastResults.sentiment, lastResults.positioning,
-        DEFAULT_MY_PRODUCT, true,
+        myProduct, true,
       )) {
         html += chunk
         setReportHtml(html)
@@ -158,6 +174,93 @@ export default function App() {
 
       {/* Main */}
       <main style={{ maxWidth: 860, margin: '0 auto', padding: '40px 20px' }}>
+
+        {/* Your product config */}
+        <div style={{ marginBottom: 32 }}>
+          <button
+            onClick={() => setShowProductConfig(p => !p)}
+            style={{
+              background: 'none', border: '1px solid #1e1e3a', borderRadius: 6,
+              color: '#555', fontSize: 11, fontFamily: 'monospace', cursor: 'pointer',
+              padding: '5px 12px', letterSpacing: 1,
+            }}
+          >
+            {showProductConfig ? '▾' : '▸'} YOUR PRODUCT: {myProduct.name}
+          </button>
+
+          {showProductConfig && (
+            <div style={{
+              marginTop: 12, padding: 20, background: '#0d0d20',
+              border: '1px solid #1e1e3a', borderRadius: 8, display: 'grid', gap: 12,
+            }}>
+              {([
+                ['name', 'Product name', myProduct.name],
+                ['category', 'Category (e.g. B2B SaaS CRM)', myProduct.category],
+                ['tagline', 'Tagline', myProduct.tagline],
+              ] as [keyof MyProduct, string, string][]).map(([field, label, value]) => (
+                <div key={field}>
+                  <div style={{ fontSize: 10, color: '#555', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>{label}</div>
+                  <input
+                    value={value as string}
+                    onChange={e => {
+                      const updated = { ...myProduct, [field]: e.target.value }
+                      setMyProduct(updated)
+                      saveMyProduct(updated)
+                    }}
+                    style={{
+                      width: '100%', padding: '8px 12px', background: '#0a0a1a',
+                      border: '1px solid #2a2a4a', borderRadius: 6, color: '#e0e0e0',
+                      fontSize: 13, outline: 'none',
+                    }}
+                  />
+                </div>
+              ))}
+              <div>
+                <div style={{ fontSize: 10, color: '#555', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>Positioning (1–2 sentences)</div>
+                <textarea
+                  value={myProduct.positioning}
+                  rows={2}
+                  onChange={e => {
+                    const updated = { ...myProduct, positioning: e.target.value }
+                    setMyProduct(updated)
+                    saveMyProduct(updated)
+                  }}
+                  style={{
+                    width: '100%', padding: '8px 12px', background: '#0a0a1a',
+                    border: '1px solid #2a2a4a', borderRadius: 6, color: '#e0e0e0',
+                    fontSize: 13, outline: 'none', resize: 'vertical', fontFamily: 'inherit',
+                  }}
+                />
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: '#555', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>Features (one per line)</div>
+                <textarea
+                  value={myProduct.features.join('\n')}
+                  rows={5}
+                  onChange={e => {
+                    const updated = { ...myProduct, features: e.target.value.split('\n') }
+                    setMyProduct(updated)
+                    saveMyProduct(updated)
+                  }}
+                  style={{
+                    width: '100%', padding: '8px 12px', background: '#0a0a1a',
+                    border: '1px solid #2a2a4a', borderRadius: 6, color: '#e0e0e0',
+                    fontSize: 13, outline: 'none', resize: 'vertical', fontFamily: 'monospace',
+                  }}
+                />
+              </div>
+              <button
+                onClick={() => { setMyProduct(DEFAULT_MY_PRODUCT); saveMyProduct(DEFAULT_MY_PRODUCT) }}
+                style={{
+                  alignSelf: 'flex-start', background: 'none', border: '1px solid #2a2a4a',
+                  borderRadius: 6, color: '#555', fontSize: 11, cursor: 'pointer', padding: '4px 10px',
+                }}
+              >
+                Reset to FlowDesk demo
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* Input */}
         <div style={{ marginBottom: 40 }}>

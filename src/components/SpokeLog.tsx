@@ -41,16 +41,29 @@ export default function SpokeLog({ name, label, status, log, model }: Props) {
         <span style={{ color: '#555', fontSize: 11, fontFamily: 'monospace' }}>{label}</span>
         <span style={{ marginLeft: 'auto', color: '#444', fontSize: 10, fontFamily: 'monospace' }}>{model}</span>
       </div>
+      {status === 'error' && log.length > 0 && (
+        <div style={{
+          margin: '8px 0 4px', padding: '6px 10px', background: '#2a0a0a',
+          border: '1px solid #f4433633', borderRadius: 6,
+          fontFamily: 'monospace', fontSize: 11, color: '#f44336',
+        }}>
+          ✗ {log.filter(l => l.startsWith('Error:')).at(-1) ?? log.at(-1)}
+        </div>
+      )}
       {log.length > 0 && (
         <div style={{
           fontFamily: 'monospace', fontSize: 11, color: '#666', lineHeight: 1.7,
           borderTop: '1px solid #1e1e3a', paddingTop: 10, maxHeight: 80, overflowY: 'auto',
         }}>
-          {log.map((line, i) => (
-            <div key={i} style={{ color: i === log.length - 1 ? '#aaa' : '#555' }}>
-              {'>'} {line}
-            </div>
-          ))}
+          {log.map((line, i) => {
+            const isError = line.startsWith('Error:')
+            const isLast = i === log.length - 1
+            return (
+              <div key={i} style={{ color: isError ? '#f44336' : isLast ? '#aaa' : '#555' }}>
+                {'>'} {line}
+              </div>
+            )
+          })}
         </div>
       )}
     </div>

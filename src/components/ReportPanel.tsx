@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react'
+
 interface Props {
   html: string
   streaming: boolean
@@ -7,6 +9,14 @@ interface Props {
 
 export default function ReportPanel({ html, streaming, onDeepAnalysis, deepLoading }: Props) {
   const isComplete = !streaming && html.includes('</html>')
+
+  // Debounce iframe updates while streaming — prevents O(n²) DOM reflows
+  const [displayHtml, setDisplayHtml] = useState(html)
+  useEffect(() => {
+    if (!streaming) { setDisplayHtml(html); return }
+    const t = setTimeout(() => setDisplayHtml(html), 400)
+    return () => clearTimeout(t)
+  }, [html, streaming])
 
   return (
     <div style={{ marginTop: 32 }}>
@@ -30,10 +40,10 @@ export default function ReportPanel({ html, streaming, onDeepAnalysis, deepLoadi
         )}
       </div>
 
-      {/* HTML rendered in sandboxed iframe */}
-      {html && (
+      {/* HTML rendered in sandboxed iframe — uses debounced displayHtml to avoid streaming thrash */}
+      {displayHtml && (
         <iframe
-          srcDoc={html}
+          srcDoc={displayHtml}
           style={{
             width: '100%', height: 700, border: '1px solid #1e1e3a',
             borderRadius: 8, background: '#fff',
