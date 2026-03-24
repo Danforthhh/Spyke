@@ -35,5 +35,7 @@ export async function runPositioning(
     onLog,
   )
   onLog('Extracting JSON...')
-  return extractJson<PositioningData>(content)
+  const result = extractJson<PositioningData>(content)
+  onLog(`✓ Done — ${result.feature_gaps?.length ?? 0} feature gaps identified`)
+  return result
 }

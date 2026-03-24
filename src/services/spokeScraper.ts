@@ -29,5 +29,7 @@ export async function runScraper(
     onLog,
   )
   onLog('Extracting JSON...')
-  return extractJson<ScraperData>(content)
+  const result = extractJson<ScraperData>(content)
+  onLog(`✓ Done — ${result.pricing_tiers?.length ?? 0} tiers, ${result.features_list?.length ?? 0} features`)
+  return result
 }

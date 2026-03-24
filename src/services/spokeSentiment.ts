@@ -30,5 +30,7 @@ export async function runSentiment(
     onLog,
   )
   onLog('Extracting JSON...')
-  return extractJson<SentimentData>(content)
+  const result = extractJson<SentimentData>(content)
+  onLog(`✓ Done — score ${result.avg_score}/5, ${result.review_count} reviews`)
+  return result
 }
