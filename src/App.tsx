@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import SpokeLog from './components/SpokeLog'
 import ReportPanel from './components/ReportPanel'
 import type { SpokesState, ScraperData, SentimentData, PositioningData, MyProduct } from './types'
@@ -39,6 +39,16 @@ export default function App() {
   const [running, setRunning] = useState(false)
   const [myProduct, setMyProduct] = useState<MyProduct>(loadMyProduct)
   const [showProductConfig, setShowProductConfig] = useState(false)
+  const [devMode, setDevMode] = useState(() => localStorage.getItem('devMode') === 'true')
+
+  // Stay in sync when DevModeToggle writes to localStorage
+  useEffect(() => {
+    const onStorage = () => setDevMode(localStorage.getItem('devMode') === 'true')
+    window.addEventListener('storage', onStorage)
+    // Also poll — storage events don't fire in the same tab
+    const id = setInterval(onStorage, 500)
+    return () => { window.removeEventListener('storage', onStorage); clearInterval(id) }
+  }, [])
   const [lastResults, setLastResults] = useState<{
     scraper: ScraperData | null
     sentiment: SentimentData | null
@@ -345,17 +355,19 @@ export default function App() {
             </button>
           </div>
           <div style={{ marginTop: 8, fontSize: 11, color: '#444' }}>
-            Model: Sonnet 4.6 (spokes 1-3, web search) · Haiku 4.5 (report)
+            {devMode
+              ? 'Model: Groq Llama 3.3 70B · sequential · Tavily search'
+              : 'Model: Sonnet 4.6 (spokes 1-3, web search) · Haiku 4.5 (report)'}
           </div>
         </div>
 
         {/* Spokes progress */}
         {spokes.scraper.status !== 'idle' && (
           <div style={{ display: 'grid', gap: 12, marginBottom: 32 }}>
-            <SpokeLog name="SPOKE 1" label="Web Scraper" status={spokes.scraper.status} log={spokes.scraper.log} model="sonnet-4.6" />
-            <SpokeLog name="SPOKE 2" label="Sentiment Analyst" status={spokes.sentiment.status} log={spokes.sentiment.log} model="sonnet-4.6" />
-            <SpokeLog name="SPOKE 3" label="Positioning Analyst" status={spokes.positioning.status} log={spokes.positioning.log} model="sonnet-4.6" />
-            <SpokeLog name="SPOKE 4" label="Report Writer" status={spokes.report.status} log={spokes.report.log} model="haiku-4.5" />
+            <SpokeLog name="SPOKE 1" label="Web Scraper" status={spokes.scraper.status} log={spokes.scraper.log} model={devMode ? 'groq:llama-3.3-70b' : 'sonnet-4.6'} />
+            <SpokeLog name="SPOKE 2" label="Sentiment Analyst" status={spokes.sentiment.status} log={spokes.sentiment.log} model={devMode ? 'groq:llama-3.3-70b' : 'sonnet-4.6'} />
+            <SpokeLog name="SPOKE 3" label="Positioning Analyst" status={spokes.positioning.status} log={spokes.positioning.log} model={devMode ? 'groq:llama-3.3-70b' : 'sonnet-4.6'} />
+            <SpokeLog name="SPOKE 4" label="Report Writer" status={spokes.report.status} log={spokes.report.log} model={devMode ? 'groq:llama-3.3-70b' : 'haiku-4.5'} />
           </div>
         )}
 
