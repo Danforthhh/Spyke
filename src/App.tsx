@@ -145,6 +145,9 @@ export default function App() {
 
     let html = ''
     try {
+      // Deep analysis uses current myProduct (not a snapshot) — this is intentional.
+      // The user explicitly triggers deep analysis after the regular report completes,
+      // so using the current product config at invocation time is the expected behaviour.
       for await (const chunk of runReport(
         competitor,
         lastResults.scraper, lastResults.sentiment, lastResults.positioning,
