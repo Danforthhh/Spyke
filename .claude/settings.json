@@ -9,6 +9,12 @@
             "timeout": 60,
             "statusMessage": "Running TypeScript check before push...",
             "command": "cmd=$(node -e \"let d='';process.stdin.resume();process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{console.log(JSON.parse(d).tool_input.command||'')}catch(e){console.log('')}})\"); if echo \"$cmd\" | grep -qE '\\bgit push\\b'; then out=$(cd /c/Code/Spyke && npx tsc --noEmit 2>&1); rc=$?; if [ $rc -ne 0 ]; then node -e \"console.log(JSON.stringify({continue:false,stopReason:'TypeScript check failed — fix errors before pushing:\\n\\n'+process.argv[1]}))\" \"$out\"; exit 1; fi; fi"
+          },
+          {
+            "type": "agent",
+            "timeout": 120,
+            "statusMessage": "🔍 Running code review before deploy...",
+            "prompt": "A bash command was intercepted: $ARGUMENTS\n\nExtract the value of tool_input.command from the JSON above.\n\nIf the command does NOT contain 'npm run deploy': immediately output {\"continue\": true} and stop — do not read any files or do anything else.\n\nIf the command DOES contain 'npm run deploy': read the file at .claude/agents/code-reviewer.md for your full instructions, then follow them exactly to review the recently changed files in /c/Code/Spyke before allowing the deploy."
           }
         ]
       }

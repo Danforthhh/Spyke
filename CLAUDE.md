@@ -91,6 +91,20 @@ Spokes 1–3 send `web_search_20260209` + `web_fetch_20260209` tools. In DEV mod
 
 ## Decision log
 
+## Pre-deployment code review agent — 2026-03-24
+**Context:** Needed an automated code review step before every deploy to catch critical bugs, XSS, and security issues without relying on the developer's memory.
+
+**Options considered:**
+- **Agent hook in settings.json (inline prompt)** — automatic, blocks deploy on findings, but prompt is buried in JSON and hard to iterate on.
+- **Named agent in `.claude/agents/` + hook (chosen)** — review criteria live in a versioned markdown file that's easy to read and update independently; hook reads the file at runtime so changes take effect immediately; agent can also be invoked manually.
+- **Git pre-push shell hook calling `claude -p`** — standard DevOps pattern, runs at push not deploy, but `.git/hooks/` is not committed so every developer has to set it up manually.
+
+**Chosen:** Named agent definition at `.claude/agents/code-reviewer.md` + `PreToolUse` agent hook in `settings.json`
+- Hook intercepts every `Bash` call; if command is not `npm run deploy`, the agent exits immediately (fast path, no review)
+- If command is `npm run deploy`, agent reads `.claude/agents/code-reviewer.md` for criteria, reviews changed files via `git diff`, and either blocks (CRITICAL) or allows (HIGH/LOW)
+- Review criteria are in `.claude/agents/code-reviewer.md` — update that file to change what the reviewer checks; no need to touch `settings.json`
+- Agent has `tools: Bash, Read, Grep, Glob` only — cannot edit files
+
 ## Dev/prod free iteration setup — 2026-03-24
 **Context:** Spyke uses Claude Sonnet (web tools) + Claude Haiku/Opus heavily. Each competitor analysis burns significant API credits, making rapid iteration expensive.
 
