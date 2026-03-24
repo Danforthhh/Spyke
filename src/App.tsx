@@ -226,7 +226,7 @@ export default function App() {
           <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: -0.5, color: '#e0e0e0' }}>
             SPYKE
           </div>
-          <div style={{ fontSize: 11, color: '#555', letterSpacing: 2, textTransform: 'uppercase' }}>
+          <div style={{ fontSize: 12, color: '#888', letterSpacing: 2, textTransform: 'uppercase' }}>
             Competitive Intelligence
           </div>
         </div>
@@ -241,7 +241,7 @@ export default function App() {
             onClick={() => setShowProductConfig(p => !p)}
             style={{
               background: 'none', border: '1px solid #1e1e3a', borderRadius: 6,
-              color: '#555', fontSize: 11, fontFamily: 'monospace', cursor: 'pointer',
+              color: '#888', fontSize: 13, fontFamily: 'monospace', cursor: 'pointer',
               padding: '5px 12px', letterSpacing: 1,
             }}
           >
@@ -259,7 +259,7 @@ export default function App() {
                 ['tagline', 'Tagline', myProduct.tagline],
               ] as [keyof MyProduct, string, string][]).map(([field, label, value]) => (
                 <div key={field}>
-                  <div style={{ fontSize: 10, color: '#555', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>{label}</div>
+                  <div style={{ fontSize: 11, color: '#888', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>{label}</div>
                   <input
                     value={value as string}
                     onChange={e => {
@@ -270,13 +270,13 @@ export default function App() {
                     style={{
                       width: '100%', padding: '8px 12px', background: '#0a0a1a',
                       border: '1px solid #2a2a4a', borderRadius: 6, color: '#e0e0e0',
-                      fontSize: 13, outline: 'none',
+                      fontSize: 14, outline: 'none',
                     }}
                   />
                 </div>
               ))}
               <div>
-                <div style={{ fontSize: 10, color: '#555', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>Positioning (1–2 sentences)</div>
+                <div style={{ fontSize: 11, color: '#888', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>Positioning (1–2 sentences)</div>
                 <textarea
                   value={myProduct.positioning}
                   rows={2}
@@ -288,12 +288,12 @@ export default function App() {
                   style={{
                     width: '100%', padding: '8px 12px', background: '#0a0a1a',
                     border: '1px solid #2a2a4a', borderRadius: 6, color: '#e0e0e0',
-                    fontSize: 13, outline: 'none', resize: 'vertical', fontFamily: 'inherit',
+                    fontSize: 14, outline: 'none', resize: 'vertical', fontFamily: 'inherit',
                   }}
                 />
               </div>
               <div>
-                <div style={{ fontSize: 10, color: '#555', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>Features (one per line)</div>
+                <div style={{ fontSize: 11, color: '#888', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>Features (one per line)</div>
                 <textarea
                   value={myProduct.features.join('\n')}
                   rows={5}
@@ -305,7 +305,7 @@ export default function App() {
                   style={{
                     width: '100%', padding: '8px 12px', background: '#0a0a1a',
                     border: '1px solid #2a2a4a', borderRadius: 6, color: '#e0e0e0',
-                    fontSize: 13, outline: 'none', resize: 'vertical', fontFamily: 'monospace',
+                    fontSize: 14, outline: 'none', resize: 'vertical', fontFamily: 'monospace',
                   }}
                 />
               </div>
@@ -313,7 +313,7 @@ export default function App() {
                 onClick={() => { setMyProduct(DEFAULT_MY_PRODUCT); saveMyProduct(DEFAULT_MY_PRODUCT) }}
                 style={{
                   alignSelf: 'flex-start', background: 'none', border: '1px solid #2a2a4a',
-                  borderRadius: 6, color: '#555', fontSize: 11, cursor: 'pointer', padding: '4px 10px',
+                  borderRadius: 6, color: '#888', fontSize: 12, cursor: 'pointer', padding: '4px 10px',
                 }}
               >
                 Reset to FlowDesk demo
@@ -324,7 +324,7 @@ export default function App() {
 
         {/* Input */}
         <div style={{ marginBottom: 40 }}>
-          <div style={{ fontSize: 12, color: '#6c63ff', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>
+          <div style={{ fontSize: 13, color: '#6c63ff', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>
             SaaS B2B Competitor
           </div>
           <div style={{ display: 'flex', gap: 12 }}>
@@ -354,7 +354,7 @@ export default function App() {
               {running ? 'Analyzing...' : '▶ Analyze'}
             </button>
           </div>
-          <div style={{ marginTop: 8, fontSize: 11, color: '#444' }}>
+          <div style={{ marginTop: 8, fontSize: 12, color: '#777' }}>
             {devMode
               ? 'Model: Groq Llama 3.3 70B · sequential · Tavily search'
               : 'Model: Sonnet 4.6 (spokes 1-3, web search) · Haiku 4.5 (report)'}
@@ -383,9 +383,9 @@ export default function App() {
 
         {/* Empty state */}
         {spokes.scraper.status === 'idle' && (
-          <div style={{ textAlign: 'center', padding: '80px 0', color: '#2a2a4a' }}>
+          <div style={{ textAlign: 'center', padding: '80px 0', color: '#4a4a6a' }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>◎</div>
-            <div style={{ fontFamily: 'monospace', fontSize: 13 }}>
+            <div style={{ fontFamily: 'monospace', fontSize: 14 }}>
               Enter a competitor name to start the analysis
             </div>
           </div>

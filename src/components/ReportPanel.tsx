@@ -21,8 +21,8 @@ export default function ReportPanel({ html, streaming, onDeepAnalysis, deepLoadi
   return (
     <div style={{ marginTop: 32 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
-        <h2 style={{ margin: 0, color: '#e0e0e0', fontSize: 18 }}>
-          Report generated {streaming && <span style={{ color: '#6c63ff', fontSize: 13 }}>— generating...</span>}
+        <h2 style={{ margin: 0, color: '#e0e0e0', fontSize: 19 }}>
+          Report generated {streaming && <span style={{ color: '#6c63ff', fontSize: 14 }}>— generating...</span>}
         </h2>
         {isComplete && onDeepAnalysis && (
           <button
@@ -32,7 +32,7 @@ export default function ReportPanel({ html, streaming, onDeepAnalysis, deepLoadi
               marginLeft: 'auto', padding: '8px 18px',
               background: deepLoading ? '#2a2a4a' : 'transparent',
               border: '1px solid #6c63ff', borderRadius: 6, color: deepLoading ? '#666' : '#6c63ff',
-              fontSize: 12, cursor: deepLoading ? 'not-allowed' : 'pointer', fontWeight: 600,
+              fontSize: 13, cursor: deepLoading ? 'not-allowed' : 'pointer', fontWeight: 600,
             }}
           >
             {deepLoading ? 'Generating with Opus 4.6...' : '✦ Deep analysis with Opus 4.6'}
@@ -66,7 +66,7 @@ export default function ReportPanel({ html, streaming, onDeepAnalysis, deepLoadi
             }}
             style={{
               padding: '8px 18px', background: '#1e1e3a', border: '1px solid #2a2a4a',
-              borderRadius: 6, color: '#aaa', fontSize: 12, cursor: 'pointer',
+              borderRadius: 6, color: '#bbb', fontSize: 13, cursor: 'pointer',
             }}
           >
             Download HTML
