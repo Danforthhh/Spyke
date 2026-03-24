@@ -78,30 +78,60 @@ export default function App() {
     setReportHtml('')
     setLastResults(null)
 
-    // Run 3 spokes in parallel (full isolation — each only receives competitor name)
-    updateSpoke('scraper', { status: 'running' })
-    updateSpoke('sentiment', { status: 'running' })
-    updateSpoke('positioning', { status: 'running' })
-
     const TIMEOUT = 150_000
-    const [scraperResult, sentimentResult, positioningResult] = await Promise.allSettled([
-      withTimeout(runScraper(competitor, msg => addLog('scraper', msg)), TIMEOUT, 'Scraper'),
-      withTimeout(runSentiment(competitor, msg => addLog('sentiment', msg)), TIMEOUT, 'Sentiment'),
-      withTimeout(runPositioning(competitor, productSnapshot, msg => addLog('positioning', msg)), TIMEOUT, 'Positioning'),
-    ])
+    const errMsg = (r: unknown) => r instanceof Error ? r.message : String(r)
+
+    // Wraps a promise into a PromiseSettledResult without throwing
+    const settle = <T,>(p: Promise<T>): Promise<PromiseSettledResult<T>> =>
+      p.then((value): PromiseSettledResult<T> => ({ status: 'fulfilled', value }))
+       .catch((reason): PromiseSettledResult<T> => ({ status: 'rejected', reason }))
+
+    const devMode = localStorage.getItem('devMode') === 'true'
+
+    let scraperResult: PromiseSettledResult<ScraperData>
+    let sentimentResult: PromiseSettledResult<SentimentData>
+    let positioningResult: PromiseSettledResult<PositioningData>
+
+    if (devMode) {
+      // DEV: run sequentially — Groq free tier is 12k TPM; 3 parallel spokes exhaust
+      // the budget simultaneously and all time out. Sequential gives each spoke the
+      // full rate-limit budget before the next one starts.
+      addLog('scraper', '⚡ DEV mode: running spokes sequentially to avoid Groq rate limits')
+      updateSpoke('scraper', { status: 'running' })
+      scraperResult = await settle(withTimeout(runScraper(competitor, msg => addLog('scraper', msg)), TIMEOUT, 'Scraper'))
+      updateSpoke('scraper', { status: scraperResult.status === 'fulfilled' ? 'done' : 'error' })
+      if (scraperResult.status === 'rejected') addLog('scraper', `Error: ${errMsg(scraperResult.reason)}`)
+
+      updateSpoke('sentiment', { status: 'running' })
+      sentimentResult = await settle(withTimeout(runSentiment(competitor, msg => addLog('sentiment', msg)), TIMEOUT, 'Sentiment'))
+      updateSpoke('sentiment', { status: sentimentResult.status === 'fulfilled' ? 'done' : 'error' })
+      if (sentimentResult.status === 'rejected') addLog('sentiment', `Error: ${errMsg(sentimentResult.reason)}`)
+
+      updateSpoke('positioning', { status: 'running' })
+      positioningResult = await settle(withTimeout(runPositioning(competitor, productSnapshot, msg => addLog('positioning', msg)), TIMEOUT, 'Positioning'))
+      updateSpoke('positioning', { status: positioningResult.status === 'fulfilled' ? 'done' : 'error' })
+      if (positioningResult.status === 'rejected') addLog('positioning', `Error: ${errMsg(positioningResult.reason)}`)
+    } else {
+      // PROD: run in parallel — Claude has no shared rate limit across spokes
+      updateSpoke('scraper', { status: 'running' })
+      updateSpoke('sentiment', { status: 'running' })
+      updateSpoke('positioning', { status: 'running' });
+      [scraperResult, sentimentResult, positioningResult] = await Promise.allSettled([
+        withTimeout(runScraper(competitor, msg => addLog('scraper', msg)), TIMEOUT, 'Scraper'),
+        withTimeout(runSentiment(competitor, msg => addLog('sentiment', msg)), TIMEOUT, 'Sentiment'),
+        withTimeout(runPositioning(competitor, productSnapshot, msg => addLog('positioning', msg)), TIMEOUT, 'Positioning'),
+      ])
+      updateSpoke('scraper', { status: scraperResult.status === 'fulfilled' ? 'done' : 'error' })
+      updateSpoke('sentiment', { status: sentimentResult.status === 'fulfilled' ? 'done' : 'error' })
+      updateSpoke('positioning', { status: positioningResult.status === 'fulfilled' ? 'done' : 'error' })
+      if (scraperResult.status === 'rejected') addLog('scraper', `Error: ${errMsg(scraperResult.reason)}`)
+      if (sentimentResult.status === 'rejected') addLog('sentiment', `Error: ${errMsg(sentimentResult.reason)}`)
+      if (positioningResult.status === 'rejected') addLog('positioning', `Error: ${errMsg(positioningResult.reason)}`)
+    }
 
     const scraper = scraperResult.status === 'fulfilled' ? scraperResult.value : null
     const sentiment = sentimentResult.status === 'fulfilled' ? sentimentResult.value : null
     const positioning = positioningResult.status === 'fulfilled' ? positioningResult.value : null
-
-    updateSpoke('scraper', { status: scraper ? 'done' : 'error' })
-    updateSpoke('sentiment', { status: sentiment ? 'done' : 'error' })
-    updateSpoke('positioning', { status: positioning ? 'done' : 'error' })
-
-    const errMsg = (r: unknown) => r instanceof Error ? r.message : String(r)
-    if (scraperResult.status === 'rejected') addLog('scraper', `Error: ${errMsg(scraperResult.reason)}`)
-    if (sentimentResult.status === 'rejected') addLog('sentiment', `Error: ${errMsg(sentimentResult.reason)}`)
-    if (positioningResult.status === 'rejected') addLog('positioning', `Error: ${errMsg(positioningResult.reason)}`)
 
     setLastResults({ scraper, sentiment, positioning })
 

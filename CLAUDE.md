@@ -68,6 +68,12 @@ Spokes 1–3 send `web_search_20260209` + `web_fetch_20260209` tools. In DEV mod
 
 **DEV quality note:** Groq Llama 3.3 70B is lower quality than Claude Sonnet for structured research. Use DEV to verify the pipeline works; use PROD for real analyses.
 
+## DEV vs PROD spoke execution
+- **PROD**: `Promise.allSettled` — all 3 spokes run in parallel (Claude has no shared rate limit)
+- **DEV**: sequential — each spoke awaits the previous one before starting; status updates live as each completes
+- Reason: Groq free tier is 12k TPM shared across all concurrent calls; 3 parallel spokes exhaust the budget simultaneously and all time out at 150s. Sequential gives each spoke the full budget.
+- UX note: DEV sequential shows a ⚡ banner on Spoke 1 and each spoke flips to done/error in real time before the next starts
+
 ## Spoke 4 failure handling
 - If **all 3 research spokes fail**: Spoke 4 immediately errors with a clear message (cause + remediation)
 - If **1–2 spokes fail**: Spoke 4 runs with a `⚠ N/3 spokes failed` warning log
