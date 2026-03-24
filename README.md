@@ -33,7 +33,7 @@ A multi-agent competitive analysis web app. Enter a SaaS B2B competitor name →
 |---|---|---|
 | Spoke 1 — Scraper | Sonnet 4.6 + web search | Pricing, features, recent updates |
 | Spoke 2 — Sentiment | Sonnet 4.6 + web search | G2, Capterra, Reddit reviews |
-| Spoke 3 — Positioning | Sonnet 4.6 + web search | SWOT vs your product |
+| Spoke 3 — Positioning | Sonnet 4.6 + web search | Competitor SWOT + feature gaps |
 | Spoke 4 — Report | Haiku 4.5 (or Opus 4.6 in deep mode) | HTML report |
 
 API keys are stored as Cloudflare Worker secrets — never in the browser bundle.
@@ -44,62 +44,45 @@ API keys are stored as Cloudflare Worker secrets — never in the browser bundle
 
 ```bash
 npm install
-cp .env.example .env.local
-# Fill in VITE_WORKER_URL in .env.local
-
 npm run dev   # http://localhost:5173
 ```
 
-### Environment variables
-
-| Variable | Description | Example |
-|---|---|---|
-| `VITE_WORKER_URL` | Cloudflare Worker proxy URL | `https://spyke.xxx.workers.dev` |
-
----
-
-## Cloudflare Worker (API proxy)
-
-The worker stores API keys server-side — they are never included in the JS bundle.
-
-```bash
-cd worker/
-
-# Deploy the code
-npx wrangler login
-npx wrangler deploy
-
-# Set secrets (one-time)
-npx wrangler secret put ANTHROPIC_API_KEY
-
-# Update VITE_WORKER_URL in .env.local with the displayed URL
-```
+No API keys needed locally — the app routes through a Cloudflare Worker.
 
 ---
 
 ## Deploy to GitHub Pages
 
 ```bash
-npm run build
-npx gh-pages -d dist
+npm run deploy   # builds + publishes via gh-pages
 ```
 
 ---
 
-## Development mode (free)
+## DEV / PROD toggle
 
-A **DEV/PROD toggle** pill lives in the top-right corner of the app. Click it to switch between:
+A **DEV · PROD pill** lives in the top-right corner. Click it to switch AI backends at runtime — no restart needed.
 
 | Mode | AI backend | Cost |
 |------|-----------|------|
-| **☁ PROD** | Cloudflare Worker → Claude Sonnet/Haiku/Opus | Paid per token |
-| **🔧 DEV** | Local proxy → Ollama `qwen2.5:7b` + Brave Search | Free |
+| **☁ PROD** | `spyke.vin-bories.workers.dev` → Claude Sonnet + web tools | Paid per token |
+| **🔧 DEV** | `dev-proxy.vin-bories.workers.dev` → Groq Llama 3.3 70B + Tavily | Free |
 
-The pill shows live search usage: `🔧 DEV · 42/2000 🔍 · resets Apr 1`
+The pill shows live Tavily usage: `🔧 DEV · 42/1000 🔍 · resets Apr 1`
 
-**Setup** — see [`../dev-proxy/README.md`](../dev-proxy/README.md) for one-time Ollama installation and proxy startup instructions.
+> DEV mode uses Groq for free iteration — good for testing the pipeline. Switch to PROD to validate final quality.
 
-> DEV mode simulates Claude's web search tool with an agentic loop (Brave API + DuckDuckGo). Results are good for structural iteration; switch to PROD to validate analysis quality.
+---
+
+## Cloudflare Worker (PROD API gateway)
+
+Stores API keys server-side — never in the JS bundle.
+
+```bash
+cd worker/
+npx wrangler deploy
+npx wrangler secret put ANTHROPIC_API_KEY
+```
 
 ---
 
@@ -111,5 +94,5 @@ The pill shows live search usage: `🔧 DEV · 42/2000 🔍 · resets Apr 1`
 | Initial report | Haiku 4.5 | No web needed, 10x cheaper |
 | Deep mode | Opus 4.6 + adaptive thinking | Offered after the Haiku report |
 | Parallelism | Promise.allSettled() | Full isolation — each spoke only receives competitor name |
-| Prompt caching | cache_control ephemeral | Reduces cost on repeated analyses |
 | Report format | HTML | Rich rendering, tables, colored SWOT, easy to share |
+| Spoke timeout | 150s | Accommodates Groq retry waits (up to 3× on rate limit) |
