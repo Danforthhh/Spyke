@@ -22,11 +22,13 @@ export async function runScraper(
   competitor: string,
   onLog: (msg: string) => void,
   userApiKey?: string | null,
+  focus?: string,
 ): Promise<ScraperData> {
   onLog(`Fetching pricing and features for ${competitor}...`)
+  const focusNote = focus ? `\n\nFocus area: ${focus}` : ''
   const content = await callClaude(
     SYSTEM,
-    `Analyze the B2B SaaS competitor: ${competitor}`,
+    `Analyze the B2B SaaS competitor: ${competitor}${focusNote}`,
     true,
     onLog,
     userApiKey,

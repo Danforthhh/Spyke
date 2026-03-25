@@ -23,11 +23,13 @@ export async function runSentiment(
   competitor: string,
   onLog: (msg: string) => void,
   userApiKey?: string | null,
+  focus?: string,
 ): Promise<SentimentData> {
   onLog(`Searching G2, Capterra, Reddit reviews for ${competitor}...`)
+  const focusNote = focus ? `\n\nFocus area: ${focus}` : ''
   const content = await callClaude(
     SYSTEM,
-    `Analyze customer reviews for B2B SaaS competitor: ${competitor}`,
+    `Analyze customer reviews for B2B SaaS competitor: ${competitor}${focusNote}`,
     true,
     onLog,
     userApiKey,

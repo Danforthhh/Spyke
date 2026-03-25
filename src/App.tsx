@@ -48,6 +48,7 @@ export default function App() {
 
   // ── App state ────────────────────────────────────────────────────────────
   const [competitor,       setCompetitor]       = useState('')
+  const [focus,            setFocus]            = useState('')
   const [spokes,           setSpokes]           = useState<SpokesState>(INITIAL_SPOKES)
   const [reportHtml,       setReportHtml]       = useState('')
   const [streaming,        setStreaming]        = useState(false)
@@ -163,6 +164,7 @@ export default function App() {
     const TIMEOUT = 150_000
     const errMsg = (r: unknown) => r instanceof Error ? r.message : String(r)
     const key = apiKey
+    const focusSnapshot = focus.trim() || undefined
 
     const settle = <T,>(p: Promise<T>): Promise<PromiseSettledResult<T>> =>
       p.then((value): PromiseSettledResult<T> => ({ status: 'fulfilled', value }))
@@ -177,17 +179,17 @@ export default function App() {
     if (isDev) {
       addLog('scraper', '⚡ DEV mode: running spokes sequentially to avoid Groq rate limits')
       updateSpoke('scraper', { status: 'running' })
-      scraperResult = await settle(withTimeout(runScraper(competitor, msg => addLog('scraper', msg), key), TIMEOUT, 'Scraper'))
+      scraperResult = await settle(withTimeout(runScraper(competitor, msg => addLog('scraper', msg), key, focusSnapshot), TIMEOUT, 'Scraper'))
       updateSpoke('scraper', { status: scraperResult.status === 'fulfilled' ? 'done' : 'error' })
       if (scraperResult.status === 'rejected') addLog('scraper', `Error: ${errMsg(scraperResult.reason)}`)
 
       updateSpoke('sentiment', { status: 'running' })
-      sentimentResult = await settle(withTimeout(runSentiment(competitor, msg => addLog('sentiment', msg), key), TIMEOUT, 'Sentiment'))
+      sentimentResult = await settle(withTimeout(runSentiment(competitor, msg => addLog('sentiment', msg), key, focusSnapshot), TIMEOUT, 'Sentiment'))
       updateSpoke('sentiment', { status: sentimentResult.status === 'fulfilled' ? 'done' : 'error' })
       if (sentimentResult.status === 'rejected') addLog('sentiment', `Error: ${errMsg(sentimentResult.reason)}`)
 
       updateSpoke('positioning', { status: 'running' })
-      positioningResult = await settle(withTimeout(runPositioning(competitor, productSnapshot, msg => addLog('positioning', msg), key), TIMEOUT, 'Positioning'))
+      positioningResult = await settle(withTimeout(runPositioning(competitor, productSnapshot, msg => addLog('positioning', msg), key, focusSnapshot), TIMEOUT, 'Positioning'))
       updateSpoke('positioning', { status: positioningResult.status === 'fulfilled' ? 'done' : 'error' })
       if (positioningResult.status === 'rejected') addLog('positioning', `Error: ${errMsg(positioningResult.reason)}`)
     } else {
@@ -195,11 +197,11 @@ export default function App() {
       updateSpoke('sentiment', { status: 'running' })
       updateSpoke('positioning', { status: 'running' })
       // Each spoke updates its own status immediately when it settles (not after all three)
-      const scraperP = settle(withTimeout(runScraper(competitor, msg => addLog('scraper', msg), key), TIMEOUT, 'Scraper'))
+      const scraperP = settle(withTimeout(runScraper(competitor, msg => addLog('scraper', msg), key, focusSnapshot), TIMEOUT, 'Scraper'))
         .then(r => { updateSpoke('scraper', { status: r.status === 'fulfilled' ? 'done' : 'error' }); if (r.status === 'rejected') addLog('scraper', `Error: ${errMsg(r.reason)}`); return r })
-      const sentimentP = settle(withTimeout(runSentiment(competitor, msg => addLog('sentiment', msg), key), TIMEOUT, 'Sentiment'))
+      const sentimentP = settle(withTimeout(runSentiment(competitor, msg => addLog('sentiment', msg), key, focusSnapshot), TIMEOUT, 'Sentiment'))
         .then(r => { updateSpoke('sentiment', { status: r.status === 'fulfilled' ? 'done' : 'error' }); if (r.status === 'rejected') addLog('sentiment', `Error: ${errMsg(r.reason)}`); return r })
-      const positioningP = settle(withTimeout(runPositioning(competitor, productSnapshot, msg => addLog('positioning', msg), key), TIMEOUT, 'Positioning'))
+      const positioningP = settle(withTimeout(runPositioning(competitor, productSnapshot, msg => addLog('positioning', msg), key, focusSnapshot), TIMEOUT, 'Positioning'))
         .then(r => { updateSpoke('positioning', { status: r.status === 'fulfilled' ? 'done' : 'error' }); if (r.status === 'rejected') addLog('positioning', `Error: ${errMsg(r.reason)}`); return r });
       [scraperResult, sentimentResult, positioningResult] = await Promise.all([scraperP, sentimentP, positioningP])
     }
@@ -226,7 +228,7 @@ export default function App() {
     setStreaming(true)
     let html = ''
     try {
-      for await (const chunk of runReport(competitor, scraper, sentiment, positioning, productSnapshot, false, key)) {
+      for await (const chunk of runReport(competitor, scraper, sentiment, positioning, productSnapshot, false, key, focusSnapshot)) {
         html += chunk
         setReportHtml(html)
       }
@@ -482,6 +484,17 @@ export default function App() {
               {running ? 'Analyzing...' : '▶ Analyze'}
             </button>
           </div>
+          <input
+            value={focus}
+            onChange={e => setFocus(e.target.value)}
+            placeholder="Focus area (optional) — e.g. enterprise pricing, API integrations, onboarding..."
+            disabled={running}
+            style={{
+              width: '100%', marginTop: 10, padding: '10px 18px', background: '#0d0d20',
+              border: '1px solid #1e1e3a', borderRadius: 8, color: '#aaa',
+              fontSize: 13, outline: 'none', transition: 'border-color 0.2s',
+            }}
+          />
           <div style={{ marginTop: 8, fontSize: 12, color: '#777' }}>
             {devMode
               ? 'Model: Groq Llama 3.3 70B · sequential · Tavily search'

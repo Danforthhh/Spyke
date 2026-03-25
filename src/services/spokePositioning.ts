@@ -28,11 +28,13 @@ export async function runPositioning(
   myProduct: MyProduct,
   onLog: (msg: string) => void,
   userApiKey?: string | null,
+  focus?: string,
 ): Promise<PositioningData> {
   onLog(`Comparing ${competitor} vs ${myProduct.name}...`)
+  const focusNote = focus ? `\n\nFocus area: ${focus}` : ''
   const content = await callClaude(
     SYSTEM,
-    `Competitor: ${competitor}\n\nOur product:\n\`\`\`json\n${JSON.stringify(myProduct, null, 2)}\n\`\`\``,
+    `Competitor: ${competitor}\n\nOur product:\n\`\`\`json\n${JSON.stringify(myProduct, null, 2)}\n\`\`\`${focusNote}`,
     true,
     onLog,
     userApiKey,

@@ -30,9 +30,11 @@ function buildPrompt(
   positioning: PositioningData | null,
   myProduct: MyProduct,
   analysisDate: string,
+  focus?: string,
 ): string {
+  const focusLine = focus ? `Focus area for this report: ${focus}\n` : ''
   const parts = [
-    `# Report: ${competitor} vs ${myProduct.name}\nAnalysis date: ${analysisDate}\n`,
+    `# Report: ${competitor} vs ${myProduct.name}\nAnalysis date: ${analysisDate}\n${focusLine}`,
     `## Our Product (use this data directly — do NOT say "spoke failed")\n\`\`\`json\n${JSON.stringify(myProduct, null, 2)}\n\`\`\``,
   ]
 
@@ -59,8 +61,9 @@ export async function* runReport(
   myProduct: MyProduct,
   deep = false,
   userApiKey?: string | null,
+  focus?: string,
 ): AsyncGenerator<string> {
   const analysisDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-  const user = buildPrompt(competitor, scraper, sentiment, positioning, myProduct, analysisDate)
+  const user = buildPrompt(competitor, scraper, sentiment, positioning, myProduct, analysisDate, focus)
   yield* callClaudeStreaming(SYSTEM, user, deep, userApiKey)
 }
