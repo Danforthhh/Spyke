@@ -21,6 +21,7 @@ Maximum 3 quotes. Nothing other than the JSON.`
 export async function runSentiment(
   competitor: string,
   onLog: (msg: string) => void,
+  userApiKey?: string | null,
 ): Promise<SentimentData> {
   onLog(`Searching G2, Capterra, Reddit reviews for ${competitor}...`)
   const content = await callClaude(
@@ -28,6 +29,7 @@ export async function runSentiment(
     `Analyze customer reviews for B2B SaaS competitor: ${competitor}`,
     true,
     onLog,
+    userApiKey,
   )
   onLog('Extracting JSON...')
   const result = extractJson<SentimentData>(content)

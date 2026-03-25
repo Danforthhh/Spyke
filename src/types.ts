@@ -47,6 +47,17 @@ export interface MyProduct {
   positioning: string
 }
 
+export interface EncryptedKeyBundle {
+  encryptedKey: string  // hex AES-GCM ciphertext ('' = no key set)
+  keySalt: string       // hex PBKDF2 salt
+  keyIv: string         // hex AES-GCM IV
+}
+
+export interface Session {
+  uid: string
+  email: string
+}
+
 export const DEFAULT_MY_PRODUCT: MyProduct = {
   name: 'FlowDesk',
   category: 'B2B SaaS CRM',

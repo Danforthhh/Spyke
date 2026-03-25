@@ -20,6 +20,7 @@ Nothing other than the JSON.`
 export async function runScraper(
   competitor: string,
   onLog: (msg: string) => void,
+  userApiKey?: string | null,
 ): Promise<ScraperData> {
   onLog(`Fetching pricing and features for ${competitor}...`)
   const content = await callClaude(
@@ -27,6 +28,7 @@ export async function runScraper(
     `Analyze the B2B SaaS competitor: ${competitor}`,
     true,
     onLog,
+    userApiKey,
   )
   onLog('Extracting JSON...')
   const result = extractJson<ScraperData>(content)

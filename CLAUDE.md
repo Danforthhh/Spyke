@@ -19,42 +19,56 @@
 ---
 
 ## Project overview
-Competitive intelligence tool. Given a competitor name, runs 4 parallel AI "spokes" to produce a full HTML analysis report. React 18 + TypeScript + Vite. No backend DB — report rendered in-browser.
+Competitive intelligence tool. Given a competitor name, runs 4 parallel AI "spokes" to produce a full HTML analysis report. React 19 + TypeScript + Vite + Firebase Auth + Firestore. Each user brings their own Anthropic key.
 
 ## Architecture
 ```
 Browser (React App.tsx — Hub)
+  ├─ Auth gate: Firebase Auth (email/password)
   ├─ Spoke 1: Scraper     (Sonnet + web_search) → pricing, features, recent updates
   ├─ Spoke 2: Sentiment   (Sonnet + web_search) → reviews, complaints, praises
   ├─ Spoke 3: Positioning (Sonnet + web_search) → competitor SWOT, feature gaps
   │         [Promise.allSettled — parallel, 150s timeout each]
   └─ Spoke 4: Report Writer (Haiku / Opus streaming) → full HTML report
 
-Each spoke → claudeClient.ts → getClient() → getWorkerUrl()
-                                           → PROD: spyke.vin-bories.workers.dev   (Claude Sonnet + real web tools)
-                                           → DEV:  dev-proxy.vin-bories.workers.dev (Groq Llama 3.3 70B + Tavily)
+Each spoke → claudeClient.ts → getClient(userApiKey)
+                                → PROD: api.anthropic.com directly (user's own key)
+                                → DEV:  dev-proxy.vin-bories.workers.dev (Groq Llama 3.3 70B + Tavily)
+
+API key storage:
+  User logs in → password → PBKDF2-SHA256 → AES key → decrypt(Firestore ciphertext) → in-memory apiKey
+  Firestore: users/{uid}/settings/apiKey  { encryptedKey, keySalt, keyIv }  (AES-GCM-256 encrypted)
+  sessionStorage: raw password (cleared on tab close / logout) for same-tab auto-decrypt on reload
 ```
 
 ## Key files
 | File | Role |
 |------|------|
+| `src/services/firebase.ts` | Firebase init — exports `auth`, `db` |
+| `src/services/cryptoService.ts` | PBKDF2-SHA256 + AES-GCM-256 encrypt/decrypt + sessionStorage password helpers |
+| `src/services/firestoreService.ts` | Read/write encrypted API key bundle in Firestore |
+| `src/hooks/useAuth.ts` | Firebase `onAuthStateChanged` → `{ user, loading }` |
 | `src/services/claudeClient.ts` | Anthropic SDK wrapper — `callClaude()` (tool loop), `callClaudeStreaming()`, `extractJson()` |
 | `src/services/spokeScraper.ts` | Spoke 1 — pricing & features JSON |
 | `src/services/spokeSentiment.ts` | Spoke 2 — review sentiment JSON |
 | `src/services/spokePositioning.ts` | Spoke 3 — **competitor** SWOT + feature gaps JSON |
 | `src/services/spokeReport.ts` | Spoke 4 — HTML report, includes full `myProduct` context |
-| `src/App.tsx` | Hub — parallel execution, timeout, spoke 4 failure messaging, product configurator |
-| `src/types.ts` | `ScraperData`, `SentimentData`, `PositioningData`, `MyProduct`, `SpokesState` |
-| `src/components/DevModeToggle.tsx` | DEV/PROD toggle pill — polls `/stats` every 5s |
+| `src/App.tsx` | Hub — auth gate, session state, parallel execution, timeout, product configurator |
+| `src/types.ts` | `ScraperData`, `SentimentData`, `PositioningData`, `MyProduct`, `SpokesState`, `Session`, `EncryptedKeyBundle` |
+| `src/components/AuthScreen.tsx` | Login / create account screen |
+| `src/components/AccountModal.tsx` | Account settings overlay — API key add/edit/remove, logout |
+| `src/components/UnlockModal.tsx` | Password re-entry prompt (new tab after page reload) |
+| `src/components/DevModeToggle.tsx` | DEV/PROD toggle pill — blocks PROD if no API key saved |
 | `src/components/SpokeLog.tsx` | Spoke status + log display — red banner on error |
 | `src/components/ReportPanel.tsx` | Iframe report display — debounced streaming, `allow-scripts` sandbox |
 | `.claude/agents/code-reviewer.md` | Read-only pre-deploy code reviewer — edit to change what gets flagged |
 | `.claude/settings.json` | Two PreToolUse hooks: TS check on push, code review on deploy |
+| `.env.local.example` | Firebase config template |
 
 ## DEV/PROD toggle
 - `localStorage.devMode === 'true'` → DEV (free, online CF Worker)
-- `getWorkerUrl()` in `claudeClient.ts` — read per call (not module-level)
-- **`getClient()` is a factory function** — instantiates a new `Anthropic` client on each call so `baseURL` always reflects the current toggle state
+- Switching to PROD requires an API key saved in the user's profile; toggle shows a tooltip if key is missing
+- **`getClient()` is a factory function** — instantiates a new `Anthropic` client on each call so mode always reflects the current toggle state
 - Toggle polls `GET https://dev-proxy.vin-bories.workers.dev/stats` — shows Tavily usage (tracked via Cloudflare KV)
 
 ## Web search in DEV mode
@@ -133,6 +147,37 @@ To update review criteria: edit `.claude/agents/code-reviewer.md` — no `settin
 - `getClient()` factory (not singleton) so toggle takes effect immediately without restart
 - Tavily usage tracked in Cloudflare KV, displayed in DEV toggle pill
 - PROD mode unchanged — uses real Claude Sonnet via `spyke.vin-bories.workers.dev`
+
+## Account management + per-user API keys — 2026-03-25
+**Context:** App was stateless with no auth. Owner's Anthropic key stored as Cloudflare Worker secret. Needed multi-user accounts so each user brings their own Anthropic key.
+
+**Options considered:**
+- **localStorage-only auth** — no backend, single-device, data lost on browser clear. Simple but not "online".
+- **Firebase Auth + Firestore (chosen)** — same stack as Wandr; multi-device, persistent, proper auth.
+- **Cloudflare Workers KV for user storage** — would extend existing Worker but requires new JWT auth endpoints; more complex.
+
+**Chosen:** Firebase Auth (email/password) + Firestore
+- Users sign up / sign in via Firebase; no default accounts — self-service only
+- API key encrypted client-side with AES-GCM-256 before writing to Firestore; key derived from login password via PBKDF2-SHA256 (100k iterations, 16-byte random salt)
+- Two separate PBKDF2 salts: one for the AES key derivation (`keySalt`), ensuring no cross-derivation leakage
+- Decrypted key held in React state (memory only); password persisted to `sessionStorage` for same-tab auto-decrypt on reload; cleared on logout
+- PROD Worker (`spyke.vin-bories.workers.dev`) **retired** — PROD calls now go directly to `api.anthropic.com` using the user's own key; SDK already has `dangerouslyAllowBrowser: true`
+- DEV Worker (`dev-proxy.vin-bories.workers.dev`) **unchanged**
+- PROD mode is gated in `DevModeToggle`: if `hasApiKey === false`, clicking PROD shows a tooltip instead of toggling
+- Firestore path: `users/{uid}/settings/apiKey` (document)
+- Firestore security rules: users can only read/write their own `users/{uid}/settings/*`
+
+**Key files added:**
+- `src/services/firebase.ts` — Firebase init
+- `src/services/cryptoService.ts` — PBKDF2 + AES-GCM + sessionStorage helpers
+- `src/services/firestoreService.ts` — Firestore CRUD for encrypted key bundle
+- `src/hooks/useAuth.ts` — Firebase auth state listener
+- `src/components/AuthScreen.tsx` — Login / create account (full-screen)
+- `src/components/AccountModal.tsx` — Account settings overlay (API key add/edit/remove, logout)
+- `src/components/UnlockModal.tsx` — Password re-entry prompt after page reload in new tab
+
+**Files deleted:**
+- `src/components/ApiKeyModal.tsx` — legacy unused component (replaced by AccountModal)
 
 ## UX improvements — 2026-03-24
 - Spoke error banner: red highlighted box when a spoke fails (was invisible in logs)

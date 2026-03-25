@@ -26,6 +26,7 @@ export async function runPositioning(
   competitor: string,
   myProduct: MyProduct,
   onLog: (msg: string) => void,
+  userApiKey?: string | null,
 ): Promise<PositioningData> {
   onLog(`Comparing ${competitor} vs ${myProduct.name}...`)
   const content = await callClaude(
@@ -33,6 +34,7 @@ export async function runPositioning(
     `Competitor: ${competitor}\n\nOur product:\n\`\`\`json\n${JSON.stringify(myProduct, null, 2)}\n\`\`\``,
     true,
     onLog,
+    userApiKey,
   )
   onLog('Extracting JSON...')
   const result = extractJson<PositioningData>(content)

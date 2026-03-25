@@ -1,13 +1,19 @@
 import { useState, useCallback, useEffect } from 'react'
 import SpokeLog from './components/SpokeLog'
 import ReportPanel from './components/ReportPanel'
-import type { SpokesState, ScraperData, SentimentData, PositioningData, MyProduct } from './types'
+import AuthScreen from './components/AuthScreen'
+import AccountModal from './components/AccountModal'
+import UnlockModal from './components/UnlockModal'
+import DevModeToggle from './components/DevModeToggle'
+import type { SpokesState, ScraperData, SentimentData, PositioningData, MyProduct, Session } from './types'
 import { DEFAULT_MY_PRODUCT } from './types'
 import { runScraper } from './services/spokeScraper'
 import { runSentiment } from './services/spokeSentiment'
 import { runPositioning } from './services/spokePositioning'
 import { runReport } from './services/spokeReport'
-import DevModeToggle from './components/DevModeToggle'
+import { useAuth } from './hooks/useAuth'
+import { getUserSettings } from './services/firestoreService'
+import { decryptApiKey, getPersistedPassword } from './services/cryptoService'
 
 const LS_KEY = 'spyke_my_product'
 
@@ -31,30 +37,89 @@ const INITIAL_SPOKES: SpokesState = {
 }
 
 export default function App() {
-  const [competitor, setCompetitor] = useState('')
-  const [spokes, setSpokes] = useState<SpokesState>(INITIAL_SPOKES)
-  const [reportHtml, setReportHtml] = useState('')
-  const [streaming, setStreaming] = useState(false)
-  const [deepLoading, setDeepLoading] = useState(false)
-  const [running, setRunning] = useState(false)
-  const [myProduct, setMyProduct] = useState<MyProduct>(loadMyProduct)
-  const [showProductConfig, setShowProductConfig] = useState(false)
-  const [devMode, setDevMode] = useState(() => localStorage.getItem('devMode') === 'true')
+  const { user, loading } = useAuth()
 
-  // Stay in sync when DevModeToggle writes to localStorage
-  useEffect(() => {
-    const onStorage = () => setDevMode(localStorage.getItem('devMode') === 'true')
-    window.addEventListener('storage', onStorage)
-    // Also poll — storage events don't fire in the same tab
-    const id = setInterval(onStorage, 500)
-    return () => { window.removeEventListener('storage', onStorage); clearInterval(id) }
-  }, [])
-  const [lastResults, setLastResults] = useState<{
+  // ── Session state (in-memory only) ──────────────────────────────────────
+  const [session,         setSession]         = useState<Session | null>(null)
+  const [sessionPassword, setSessionPassword] = useState<string | null>(null)
+  const [apiKey,          setApiKey]          = useState<string | null>(null)
+  const [showUnlock,      setShowUnlock]      = useState(false)
+  const [showAccount,     setShowAccount]     = useState(false)
+
+  // ── App state ────────────────────────────────────────────────────────────
+  const [competitor,       setCompetitor]       = useState('')
+  const [spokes,           setSpokes]           = useState<SpokesState>(INITIAL_SPOKES)
+  const [reportHtml,       setReportHtml]       = useState('')
+  const [streaming,        setStreaming]        = useState(false)
+  const [deepLoading,      setDeepLoading]      = useState(false)
+  const [running,          setRunning]          = useState(false)
+  const [myProduct,        setMyProduct]        = useState<MyProduct>(loadMyProduct)
+  const [showProductConfig, setShowProductConfig] = useState(false)
+  const [devMode,          setDevMode]          = useState(() => localStorage.getItem('devMode') === 'true')
+  const [lastResults,      setLastResults]      = useState<{
     scraper: ScraperData | null
     sentiment: SentimentData | null
     positioning: PositioningData | null
   } | null>(null)
 
+  // Stay in sync when DevModeToggle writes to localStorage
+  useEffect(() => {
+    const onStorage = () => setDevMode(localStorage.getItem('devMode') === 'true')
+    window.addEventListener('storage', onStorage)
+    const id = setInterval(onStorage, 500)
+    return () => { window.removeEventListener('storage', onStorage); clearInterval(id) }
+  }, [])
+
+  // When Firebase auth state changes, try to restore the API key from sessionStorage
+  useEffect(() => {
+    if (!user) {
+      setSession(null)
+      setSessionPassword(null)
+      setApiKey(null)
+      setShowUnlock(false)
+      return
+    }
+
+    setSession({ uid: user.uid, email: user.email ?? '' })
+
+    const pw = getPersistedPassword()
+    if (pw) {
+      // Attempt auto-decrypt with persisted password
+      setSessionPassword(pw)
+      getUserSettings(user.uid).then(async settings => {
+        if (settings?.encryptedKey) {
+          const decrypted = await decryptApiKey(settings, pw)
+          if (decrypted) setApiKey(decrypted)
+        }
+      })
+    } else {
+      // Check if user has a key; if so, prompt for password
+      getUserSettings(user.uid).then(settings => {
+        if (settings?.encryptedKey) setShowUnlock(true)
+      })
+    }
+  }, [user])
+
+  const handleLogin = (password: string) => {
+    setSessionPassword(password)
+    // apiKey will be set by the useEffect above after Firebase auth state updates
+  }
+
+  const handleUnlocked = (decryptedKey: string | null, password: string) => {
+    setSessionPassword(password)
+    setApiKey(decryptedKey)
+    setShowUnlock(false)
+  }
+
+  const handleLogout = () => {
+    setSession(null)
+    setSessionPassword(null)
+    setApiKey(null)
+    setShowUnlock(false)
+    setShowAccount(false)
+  }
+
+  // ── Spoke helpers ────────────────────────────────────────────────────────
   const updateSpoke = useCallback((
     spoke: keyof SpokesState,
     patch: Partial<SpokesState[keyof SpokesState]>,
@@ -65,7 +130,6 @@ export default function App() {
   const addLog = useCallback((spoke: keyof SpokesState, msg: string) => {
     setSpokes(prev => {
       const log = prev[spoke].log
-      // Cap at 100 entries to prevent unbounded memory growth during long runs
       const trimmed = log.length >= 100 ? log.slice(-99) : log
       return { ...prev, [spoke]: { ...prev[spoke], log: [...trimmed, msg] } }
     })
@@ -79,10 +143,10 @@ export default function App() {
       ),
     ])
 
+  // ── Analysis ────────────────────────────────────────────────────────────
   const handleAnalyze = async () => {
     if (!competitor.trim() || running) return
     setRunning(true)
-    // Snapshot product config at analysis start — prevents mid-analysis edits from corrupting results
     const productSnapshot: MyProduct = JSON.parse(JSON.stringify(myProduct))
     setSpokes(INITIAL_SPOKES)
     setReportHtml('')
@@ -90,46 +154,42 @@ export default function App() {
 
     const TIMEOUT = 150_000
     const errMsg = (r: unknown) => r instanceof Error ? r.message : String(r)
+    const key = apiKey
 
-    // Wraps a promise into a PromiseSettledResult without throwing
     const settle = <T,>(p: Promise<T>): Promise<PromiseSettledResult<T>> =>
       p.then((value): PromiseSettledResult<T> => ({ status: 'fulfilled', value }))
        .catch((reason): PromiseSettledResult<T> => ({ status: 'rejected', reason }))
 
-    const devMode = localStorage.getItem('devMode') === 'true'
+    const isDev = localStorage.getItem('devMode') === 'true'
 
     let scraperResult: PromiseSettledResult<ScraperData>
     let sentimentResult: PromiseSettledResult<SentimentData>
     let positioningResult: PromiseSettledResult<PositioningData>
 
-    if (devMode) {
-      // DEV: run sequentially — Groq free tier is 12k TPM; 3 parallel spokes exhaust
-      // the budget simultaneously and all time out. Sequential gives each spoke the
-      // full rate-limit budget before the next one starts.
+    if (isDev) {
       addLog('scraper', '⚡ DEV mode: running spokes sequentially to avoid Groq rate limits')
       updateSpoke('scraper', { status: 'running' })
-      scraperResult = await settle(withTimeout(runScraper(competitor, msg => addLog('scraper', msg)), TIMEOUT, 'Scraper'))
+      scraperResult = await settle(withTimeout(runScraper(competitor, msg => addLog('scraper', msg), key), TIMEOUT, 'Scraper'))
       updateSpoke('scraper', { status: scraperResult.status === 'fulfilled' ? 'done' : 'error' })
       if (scraperResult.status === 'rejected') addLog('scraper', `Error: ${errMsg(scraperResult.reason)}`)
 
       updateSpoke('sentiment', { status: 'running' })
-      sentimentResult = await settle(withTimeout(runSentiment(competitor, msg => addLog('sentiment', msg)), TIMEOUT, 'Sentiment'))
+      sentimentResult = await settle(withTimeout(runSentiment(competitor, msg => addLog('sentiment', msg), key), TIMEOUT, 'Sentiment'))
       updateSpoke('sentiment', { status: sentimentResult.status === 'fulfilled' ? 'done' : 'error' })
       if (sentimentResult.status === 'rejected') addLog('sentiment', `Error: ${errMsg(sentimentResult.reason)}`)
 
       updateSpoke('positioning', { status: 'running' })
-      positioningResult = await settle(withTimeout(runPositioning(competitor, productSnapshot, msg => addLog('positioning', msg)), TIMEOUT, 'Positioning'))
+      positioningResult = await settle(withTimeout(runPositioning(competitor, productSnapshot, msg => addLog('positioning', msg), key), TIMEOUT, 'Positioning'))
       updateSpoke('positioning', { status: positioningResult.status === 'fulfilled' ? 'done' : 'error' })
       if (positioningResult.status === 'rejected') addLog('positioning', `Error: ${errMsg(positioningResult.reason)}`)
     } else {
-      // PROD: run in parallel — Claude has no shared rate limit across spokes
       updateSpoke('scraper', { status: 'running' })
       updateSpoke('sentiment', { status: 'running' })
       updateSpoke('positioning', { status: 'running' });
       [scraperResult, sentimentResult, positioningResult] = await Promise.allSettled([
-        withTimeout(runScraper(competitor, msg => addLog('scraper', msg)), TIMEOUT, 'Scraper'),
-        withTimeout(runSentiment(competitor, msg => addLog('sentiment', msg)), TIMEOUT, 'Sentiment'),
-        withTimeout(runPositioning(competitor, productSnapshot, msg => addLog('positioning', msg)), TIMEOUT, 'Positioning'),
+        withTimeout(runScraper(competitor, msg => addLog('scraper', msg), key), TIMEOUT, 'Scraper'),
+        withTimeout(runSentiment(competitor, msg => addLog('sentiment', msg), key), TIMEOUT, 'Sentiment'),
+        withTimeout(runPositioning(competitor, productSnapshot, msg => addLog('positioning', msg), key), TIMEOUT, 'Positioning'),
       ])
       updateSpoke('scraper', { status: scraperResult.status === 'fulfilled' ? 'done' : 'error' })
       updateSpoke('sentiment', { status: sentimentResult.status === 'fulfilled' ? 'done' : 'error' })
@@ -139,13 +199,12 @@ export default function App() {
       if (positioningResult.status === 'rejected') addLog('positioning', `Error: ${errMsg(positioningResult.reason)}`)
     }
 
-    const scraper = scraperResult.status === 'fulfilled' ? scraperResult.value : null
-    const sentiment = sentimentResult.status === 'fulfilled' ? sentimentResult.value : null
+    const scraper    = scraperResult.status    === 'fulfilled' ? scraperResult.value    : null
+    const sentiment  = sentimentResult.status  === 'fulfilled' ? sentimentResult.value  : null
     const positioning = positioningResult.status === 'fulfilled' ? positioningResult.value : null
 
     setLastResults({ scraper, sentiment, positioning })
 
-    // Spoke 4: report (streaming)
     const failedCount = [scraper, sentiment, positioning].filter(r => r === null).length
 
     if (failedCount === 3) {
@@ -157,13 +216,12 @@ export default function App() {
     }
 
     updateSpoke('report', { status: 'running' })
-    if (failedCount > 0) {
-      addLog('report', `⚠ ${failedCount}/3 research spokes failed — report will have gaps`)
-    }
+    if (failedCount > 0) addLog('report', `⚠ ${failedCount}/3 research spokes failed — report will have gaps`)
+
     setStreaming(true)
     let html = ''
     try {
-      for await (const chunk of runReport(competitor, scraper, sentiment, positioning, productSnapshot)) {
+      for await (const chunk of runReport(competitor, scraper, sentiment, positioning, productSnapshot, false, key)) {
         html += chunk
         setReportHtml(html)
       }
@@ -183,15 +241,13 @@ export default function App() {
     setStreaming(true)
     setReportHtml('')
 
+    const key = apiKey
     let html = ''
     try {
-      // Deep analysis uses current myProduct (not a snapshot) — this is intentional.
-      // The user explicitly triggers deep analysis after the regular report completes,
-      // so using the current product config at invocation time is the expected behaviour.
       for await (const chunk of runReport(
         competitor,
         lastResults.scraper, lastResults.sentiment, lastResults.positioning,
-        myProduct, true,
+        myProduct, true, key,
       )) {
         html += chunk
         setReportHtml(html)
@@ -205,9 +261,57 @@ export default function App() {
     setDeepLoading(false)
   }
 
+  // ── Render guards ────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div style={{
+        position: 'fixed', inset: 0, background: '#0f0f23',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: '#888', fontFamily: 'monospace', fontSize: 13,
+      }}>
+        Loading…
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <>
+        <DevModeToggle hasApiKey={false} onOpenAccount={() => {}} />
+        <AuthScreen onLogin={handleLogin} />
+      </>
+    )
+  }
+
+  if (showUnlock && session) {
+    return (
+      <>
+        <DevModeToggle hasApiKey={false} onOpenAccount={() => {}} />
+        <UnlockModal
+          uid={session.uid}
+          email={session.email}
+          onUnlocked={handleUnlocked}
+        />
+      </>
+    )
+  }
+
+  // ── Main app ─────────────────────────────────────────────────────────────
   return (
     <>
-      <DevModeToggle />
+      <DevModeToggle hasApiKey={!!apiKey} onOpenAccount={() => setShowAccount(true)} />
+
+      {showAccount && session && sessionPassword && (
+        <AccountModal
+          session={session}
+          sessionPassword={sessionPassword}
+          hasKey={!!apiKey}
+          onKeyUpdated={newKey => setApiKey(newKey)}
+          onLogout={handleLogout}
+          onClose={() => setShowAccount(false)}
+        />
+      )}
+
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { background: #0f0f23; color: #e0e0e0; font-family: system-ui, sans-serif; }
@@ -230,6 +334,17 @@ export default function App() {
             Competitive Intelligence
           </div>
         </div>
+        {/* Account button */}
+        <button
+          onClick={() => setShowAccount(true)}
+          style={{
+            marginLeft: 'auto', background: 'none', border: '1px solid #2a2a4a',
+            borderRadius: 20, color: '#888', fontSize: 12, fontFamily: 'monospace',
+            cursor: 'pointer', padding: '5px 14px', letterSpacing: 0.5,
+          }}
+        >
+          {session?.email}
+        </button>
       </header>
 
       {/* Main */}

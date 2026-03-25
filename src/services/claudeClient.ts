@@ -1,6 +1,10 @@
 /**
- * Anthropic SDK wrapper for browser usage via Cloudflare Worker proxy.
- * API keys are stored server-side (Cloudflare secrets) — never in the bundle.
+ * Anthropic SDK wrapper for browser usage.
+ *
+ * Routing:
+ *   DEV mode  → dev-proxy.vin-bories.workers.dev  (Groq llama-3.3-70b + Tavily search)
+ *   PROD mode → api.anthropic.com directly using the user's own Anthropic key
+ *
  * Cast notes:
  * - WEB_TOOLS: web_search/web_fetch are server-side tools not present in ToolUnion → cast any
  * - thinking adaptive: type 'adaptive' not yet in SDK types → cast any
@@ -9,22 +13,33 @@
  */
 import Anthropic from '@anthropic-ai/sdk'
 
-// PROD: Cloudflare Worker (API keys stored as secrets — never in the bundle)
-// DEV:  Cloudflare Worker dev-proxy — free Groq (llama-3.3-70b) + Tavily search
-// Switch via the DEV/PROD toggle in the UI (persisted to localStorage).
-const WORKER_URL_PROD = 'https://spyke.vin-bories.workers.dev'
-const WORKER_URL_DEV  = 'https://dev-proxy.vin-bories.workers.dev'
-const getWorkerUrl = () =>
-  localStorage.getItem('devMode') === 'true' ? WORKER_URL_DEV : WORKER_URL_PROD
+// DEV: Cloudflare Worker dev-proxy — free Groq (llama-3.3-70b) + Tavily search
+const WORKER_URL_DEV = 'https://dev-proxy.vin-bories.workers.dev'
+const getWorkerUrl = () => WORKER_URL_DEV
 
-// Returns a fresh client on every call so the URL is always up-to-date with the toggle
-function getClient() {
-  return new Anthropic({ apiKey: 'via-worker', baseURL: `${getWorkerUrl()}/anthropic`, dangerouslyAllowBrowser: true })
+/**
+ * Returns a fresh Anthropic client on every call.
+ * - DEV mode: routes through the dev-proxy Worker (Groq + Tavily)
+ * - PROD mode: calls api.anthropic.com directly with the user's own key
+ */
+function getClient(userApiKey?: string | null) {
+  const isDev = localStorage.getItem('devMode') === 'true'
+  if (isDev) {
+    return new Anthropic({
+      apiKey: 'via-worker',
+      baseURL: `${getWorkerUrl()}/anthropic`,
+      dangerouslyAllowBrowser: true,
+    })
+  }
+  return new Anthropic({
+    apiKey: userApiKey ?? 'missing-key',
+    dangerouslyAllowBrowser: true,
+  })
 }
 
-export const MODEL_WEB = 'claude-sonnet-4-6'    // web_search/web_fetch (Haiku ne supporte pas)
-export const MODEL_REPORT = 'claude-haiku-4-5'  // rapport sans web tools
-export const MODEL_DEEP = 'claude-opus-4-6'     // mode deep
+export const MODEL_WEB    = 'claude-sonnet-4-6'   // web_search/web_fetch (Haiku ne supporte pas)
+export const MODEL_REPORT = 'claude-haiku-4-5'    // rapport sans web tools
+export const MODEL_DEEP   = 'claude-opus-4-6'     // mode deep
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const WEB_TOOLS: any[] = [
@@ -54,8 +69,9 @@ export async function callClaude(
   user: string,
   useWeb = false,
   onLog?: (msg: string) => void,
+  userApiKey?: string | null,
 ): Promise<string> {
-  const client = getClient()
+  const client = getClient(userApiKey)
   const model = useWeb ? MODEL_WEB : MODEL_REPORT
 
   const messages: Anthropic.MessageParam[] = [{ role: 'user', content: user }]
@@ -85,8 +101,9 @@ export async function* callClaudeStreaming(
   system: string,
   user: string,
   deep = false,
+  userApiKey?: string | null,
 ): AsyncGenerator<string> {
-  const client = getClient()
+  const client = getClient(userApiKey)
   const model = deep ? MODEL_DEEP : MODEL_REPORT
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

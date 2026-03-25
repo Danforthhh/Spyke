@@ -57,7 +57,8 @@ export async function* runReport(
   positioning: PositioningData | null,
   myProduct: MyProduct,
   deep = false,
+  userApiKey?: string | null,
 ): AsyncGenerator<string> {
   const user = buildPrompt(competitor, scraper, sentiment, positioning, myProduct)
-  yield* callClaudeStreaming(SYSTEM, user, deep)
+  yield* callClaudeStreaming(SYSTEM, user, deep, userApiKey)
 }
