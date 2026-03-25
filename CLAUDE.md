@@ -165,7 +165,12 @@ To update review criteria: edit `.claude/agents/code-reviewer.md` — no `settin
 - DEV Worker (`dev-proxy.vin-bories.workers.dev`) **unchanged**
 - PROD mode is gated in `DevModeToggle`: if `hasApiKey === false`, clicking PROD shows a tooltip instead of toggling
 - Firestore path: `users/{uid}/settings/apiKey` (document)
-- Firestore security rules: users can only read/write their own `users/{uid}/settings/*`
+- Firestore path: `users/{uid}/reports/{reportId}` (auto-ID documents, saved analyses)
+- Firestore security rules: users can only read/write their own data
+  ```
+  match /users/{uid}/settings/{doc}    { allow read, write: if request.auth.uid == uid; }
+  match /users/{uid}/reports/{reportId} { allow read, write: if request.auth.uid == uid; }
+  ```
 
 **Key files added:**
 - `src/services/firebase.ts` — Firebase init
