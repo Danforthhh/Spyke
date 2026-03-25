@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { signOut } from 'firebase/auth'
-import { auth } from '../services/firebase'
+import { signOut, reauthenticateWithCredential, EmailAuthProvider, deleteUser } from 'firebase/auth'
+import { deleteDoc, doc } from 'firebase/firestore'
+import { auth, db } from '../services/firebase'
 import { encryptApiKey, clearPersistedPassword } from '../services/cryptoService'
 import { saveEncryptedKey, removeEncryptedKey } from '../services/firestoreService'
 import type { Session } from '../types'
@@ -17,10 +18,12 @@ interface Props {
 export default function AccountModal({
   session, sessionPassword, hasKey, onKeyUpdated, onLogout, onClose,
 }: Props) {
-  const [editing,  setEditing]  = useState(false)
-  const [keyInput, setKeyInput] = useState('')
-  const [saving,   setSaving]   = useState(false)
-  const [error,    setError]    = useState('')
+  const [editing,       setEditing]       = useState(false)
+  const [keyInput,      setKeyInput]      = useState('')
+  const [saving,        setSaving]        = useState(false)
+  const [error,         setError]         = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting,      setDeleting]      = useState(false)
 
   const handleSaveKey = async () => {
     const trimmed = keyInput.trim()
@@ -57,6 +60,33 @@ export default function AccountModal({
     clearPersistedPassword()
     await signOut(auth)
     onLogout()
+  }
+
+  const handleDeleteAccount = async () => {
+    const currentUser = auth.currentUser
+    if (!currentUser) return
+    setDeleting(true)
+    setError('')
+    try {
+      // Re-authenticate before deletion (Firebase requires this for sensitive operations)
+      const credential = EmailAuthProvider.credential(session.email, sessionPassword)
+      await reauthenticateWithCredential(currentUser, credential)
+      // Delete Firestore data first, then the auth account
+      await deleteDoc(doc(db, 'users', session.uid, 'settings', 'apiKey'))
+      await deleteUser(currentUser)
+      clearPersistedPassword()
+      onLogout()
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code ?? ''
+      if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+        setError('Re-authentication failed. Please sign out and sign back in before deleting.')
+      } else {
+        setError('Failed to delete account. Please try again.')
+      }
+      setConfirmDelete(false)
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const inputStyle: React.CSSProperties = {
@@ -183,11 +213,66 @@ export default function AccountModal({
             width: '100%', padding: '11px 0',
             background: 'none', border: '1px solid #2a2a4a',
             borderRadius: 8, color: '#888', fontSize: 13,
-            cursor: 'pointer',
+            cursor: 'pointer', marginBottom: 12,
           }}
         >
           Sign out
         </button>
+
+        {/* Delete account */}
+        {!confirmDelete ? (
+          <button
+            onClick={() => { setConfirmDelete(true); setError('') }}
+            style={{
+              width: '100%', padding: '11px 0',
+              background: 'none', border: '1px solid #3a1a1a',
+              borderRadius: 8, color: '#7a3a3a', fontSize: 13,
+              cursor: 'pointer',
+            }}
+          >
+            Delete account
+          </button>
+        ) : (
+          <div style={{
+            padding: '16px', border: '1px solid #5a2a2a',
+            borderRadius: 8, background: '#1a0a0a',
+          }}>
+            <div style={{ fontSize: 13, color: '#f44336', marginBottom: 12, lineHeight: 1.5 }}>
+              This permanently deletes your account and API key. This cannot be undone.
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleting}
+                style={{
+                  flex: 1, padding: '9px 0',
+                  background: deleting ? '#2a0a0a' : '#c0392b',
+                  border: 'none', borderRadius: 8,
+                  color: deleting ? '#666' : '#fff',
+                  fontSize: 13, fontWeight: 600,
+                  cursor: deleting ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {deleting ? 'Deleting…' : 'Confirm delete'}
+              </button>
+              <button
+                onClick={() => { setConfirmDelete(false); setError('') }}
+                disabled={deleting}
+                style={{
+                  flex: 1, padding: '9px 0',
+                  background: 'none', border: '1px solid #2a2a4a',
+                  borderRadius: 8, color: '#888', fontSize: 13,
+                  cursor: deleting ? 'not-allowed' : 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+            {error && (
+              <div style={{ color: '#f44336', fontSize: 12, marginTop: 8 }}>{error}</div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
