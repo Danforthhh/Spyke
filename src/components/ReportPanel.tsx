@@ -53,7 +53,7 @@ export default function ReportPanel({ html, streaming, onDeepAnalysis, deepLoadi
         />
       )}
 
-      {/* Download button */}
+      {/* Download buttons */}
       {isComplete && (
         <div style={{ marginTop: 12, display: 'flex', gap: 12 }}>
           <button
@@ -70,6 +70,22 @@ export default function ReportPanel({ html, streaming, onDeepAnalysis, deepLoadi
             }}
           >
             Download HTML
+          </button>
+          <button
+            onClick={() => {
+              // Open in a new tab and trigger the browser's print-to-PDF dialog
+              const win = window.open('', '_blank')
+              if (!win) return
+              win.document.write(html)
+              win.document.close()
+              win.addEventListener('load', () => { win.focus(); win.print() })
+            }}
+            style={{
+              padding: '8px 18px', background: '#1e1e3a', border: '1px solid #2a2a4a',
+              borderRadius: 6, color: '#bbb', fontSize: 13, cursor: 'pointer',
+            }}
+          >
+            Export PDF
           </button>
         </div>
       )}
