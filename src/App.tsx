@@ -63,6 +63,7 @@ export default function App() {
   } | null>(null)
   const [savedReports,     setSavedReports]     = useState<SavedReport[]>([])
   const [showHistory,      setShowHistory]      = useState(false)
+  const [reportDate,       setReportDate]       = useState<number | undefined>(undefined)
 
   // Stay in sync when DevModeToggle writes to localStorage
   useEffect(() => {
@@ -156,6 +157,7 @@ export default function App() {
     const productSnapshot: MyProduct = JSON.parse(JSON.stringify(myProduct))
     setSpokes(INITIAL_SPOKES)
     setReportHtml('')
+    setReportDate(undefined)
     setLastResults(null)
 
     const TIMEOUT = 150_000
@@ -230,9 +232,11 @@ export default function App() {
       }
       updateSpoke('report', { status: 'done' })
       // Persist the completed report
+      const now = Date.now()
+      setReportDate(now)
       if (session) {
         saveReport(session.uid, competitor, html)
-          .then(id => setSavedReports(prev => [{ id, competitor, html, createdAt: Date.now() }, ...prev]))
+          .then(id => setSavedReports(prev => [{ id, competitor, html, createdAt: now }, ...prev]))
           .catch(() => {})
       }
     } catch (e) {
@@ -517,7 +521,7 @@ export default function App() {
                       {new Date(r.createdAt).toLocaleDateString()} {new Date(r.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                     <button
-                      onClick={() => { setCompetitor(r.competitor); setReportHtml(r.html); setShowHistory(false) }}
+                      onClick={() => { setCompetitor(r.competitor); setReportHtml(r.html); setReportDate(r.createdAt); setShowHistory(false) }}
                       style={{
                         padding: '4px 12px', background: 'none', border: '1px solid #2a2a4a',
                         borderRadius: 6, color: '#aaa', fontSize: 12, cursor: 'pointer',
@@ -561,6 +565,7 @@ export default function App() {
           <ReportPanel
             html={reportHtml}
             streaming={streaming}
+            reportDate={reportDate}
             onDeepAnalysis={!streaming ? handleDeepAnalysis : undefined}
             deepLoading={deepLoading}
           />

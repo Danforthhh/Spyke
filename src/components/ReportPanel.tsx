@@ -3,11 +3,12 @@ import { useState, useEffect } from 'react'
 interface Props {
   html: string
   streaming: boolean
+  reportDate?: number  // Unix ms — set for loaded past reports
   onDeepAnalysis?: () => void
   deepLoading?: boolean
 }
 
-export default function ReportPanel({ html, streaming, onDeepAnalysis, deepLoading }: Props) {
+export default function ReportPanel({ html, streaming, reportDate, onDeepAnalysis, deepLoading }: Props) {
   const isComplete = !streaming && html.includes('</html>')
 
   // Debounce iframe updates while streaming — prevents O(n²) DOM reflows
@@ -22,7 +23,12 @@ export default function ReportPanel({ html, streaming, onDeepAnalysis, deepLoadi
     <div style={{ marginTop: 32 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
         <h2 style={{ margin: 0, color: '#e0e0e0', fontSize: 19 }}>
-          Report generated {streaming && <span style={{ color: '#6c63ff', fontSize: 14 }}>— generating...</span>}
+          Report{reportDate && !streaming
+            ? <span style={{ color: '#555', fontSize: 13, fontWeight: 400, marginLeft: 10 }}>
+                {new Date(reportDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+              </span>
+            : null}
+          {streaming && <span style={{ color: '#6c63ff', fontSize: 14 }}> — generating...</span>}
         </h2>
         {isComplete && onDeepAnalysis && (
           <button

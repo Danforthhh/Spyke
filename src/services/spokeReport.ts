@@ -17,7 +17,7 @@ Required structure:
 
 Style:
 - Font: system-ui, sans-serif; max-width 900px centered
-- Header: background #1a1a2e, white text
+- Header: background #1a1a2e, white text. Include the analysis date and a staleness notice in small muted text below the title: "Analysis generated on [DATE] · Data reflects web sources as of this date and may not capture recent changes."
 - SWOT: strict 2×2 CSS grid (display:grid; grid-template-columns:1fr 1fr; gap:16px)
   Colors: Strengths=#d4edda, Weaknesses=#f8d7da, Opportunities=#cce5ff, Threats=#fff3cd
 - Tables with alternating row colors
@@ -29,9 +29,10 @@ function buildPrompt(
   sentiment: SentimentData | null,
   positioning: PositioningData | null,
   myProduct: MyProduct,
+  analysisDate: string,
 ): string {
   const parts = [
-    `# Report: ${competitor} vs ${myProduct.name}\n`,
+    `# Report: ${competitor} vs ${myProduct.name}\nAnalysis date: ${analysisDate}\n`,
     `## Our Product (use this data directly — do NOT say "spoke failed")\n\`\`\`json\n${JSON.stringify(myProduct, null, 2)}\n\`\`\``,
   ]
 
@@ -59,6 +60,7 @@ export async function* runReport(
   deep = false,
   userApiKey?: string | null,
 ): AsyncGenerator<string> {
-  const user = buildPrompt(competitor, scraper, sentiment, positioning, myProduct)
+  const analysisDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  const user = buildPrompt(competitor, scraper, sentiment, positioning, myProduct, analysisDate)
   yield* callClaudeStreaming(SYSTEM, user, deep, userApiKey)
 }
