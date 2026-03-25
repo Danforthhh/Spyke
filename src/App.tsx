@@ -185,18 +185,15 @@ export default function App() {
     } else {
       updateSpoke('scraper', { status: 'running' })
       updateSpoke('sentiment', { status: 'running' })
-      updateSpoke('positioning', { status: 'running' });
-      [scraperResult, sentimentResult, positioningResult] = await Promise.allSettled([
-        withTimeout(runScraper(competitor, msg => addLog('scraper', msg), key), TIMEOUT, 'Scraper'),
-        withTimeout(runSentiment(competitor, msg => addLog('sentiment', msg), key), TIMEOUT, 'Sentiment'),
-        withTimeout(runPositioning(competitor, productSnapshot, msg => addLog('positioning', msg), key), TIMEOUT, 'Positioning'),
-      ])
-      updateSpoke('scraper', { status: scraperResult.status === 'fulfilled' ? 'done' : 'error' })
-      updateSpoke('sentiment', { status: sentimentResult.status === 'fulfilled' ? 'done' : 'error' })
-      updateSpoke('positioning', { status: positioningResult.status === 'fulfilled' ? 'done' : 'error' })
-      if (scraperResult.status === 'rejected') addLog('scraper', `Error: ${errMsg(scraperResult.reason)}`)
-      if (sentimentResult.status === 'rejected') addLog('sentiment', `Error: ${errMsg(sentimentResult.reason)}`)
-      if (positioningResult.status === 'rejected') addLog('positioning', `Error: ${errMsg(positioningResult.reason)}`)
+      updateSpoke('positioning', { status: 'running' })
+      // Each spoke updates its own status immediately when it settles (not after all three)
+      const scraperP = settle(withTimeout(runScraper(competitor, msg => addLog('scraper', msg), key), TIMEOUT, 'Scraper'))
+        .then(r => { updateSpoke('scraper', { status: r.status === 'fulfilled' ? 'done' : 'error' }); if (r.status === 'rejected') addLog('scraper', `Error: ${errMsg(r.reason)}`); return r })
+      const sentimentP = settle(withTimeout(runSentiment(competitor, msg => addLog('sentiment', msg), key), TIMEOUT, 'Sentiment'))
+        .then(r => { updateSpoke('sentiment', { status: r.status === 'fulfilled' ? 'done' : 'error' }); if (r.status === 'rejected') addLog('sentiment', `Error: ${errMsg(r.reason)}`); return r })
+      const positioningP = settle(withTimeout(runPositioning(competitor, productSnapshot, msg => addLog('positioning', msg), key), TIMEOUT, 'Positioning'))
+        .then(r => { updateSpoke('positioning', { status: r.status === 'fulfilled' ? 'done' : 'error' }); if (r.status === 'rejected') addLog('positioning', `Error: ${errMsg(r.reason)}`); return r });
+      [scraperResult, sentimentResult, positioningResult] = await Promise.all([scraperP, sentimentP, positioningP])
     }
 
     const scraper    = scraperResult.status    === 'fulfilled' ? scraperResult.value    : null

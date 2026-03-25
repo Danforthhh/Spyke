@@ -8,6 +8,7 @@ import type { PositioningData, MyProduct } from '../types'
 
 const SYSTEM = `You are an expert in B2B SaaS product strategy and positioning.
 Search the web for information about the COMPETITOR, then produce a competitive analysis.
+Use at most 3 web searches.
 IMPORTANT: The SWOT is the COMPETITOR's SWOT (their strengths, their weaknesses, their opportunities, their threats) — NOT our product's SWOT.
 Return ONLY a valid JSON object:
 {

@@ -8,6 +8,7 @@ import type { SentimentData } from '../types'
 
 const SYSTEM = `You are an analyst specializing in B2B SaaS customer review analysis.
 Search the web for reviews on G2, Capterra and Reddit for the given competitor.
+Use at most 3 web searches.
 Return ONLY a valid JSON object:
 {
   "avg_score": number (out of 5),

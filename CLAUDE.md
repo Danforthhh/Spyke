@@ -188,6 +188,10 @@ To update review criteria: edit `.claude/agents/code-reviewer.md` — no `settin
 - Deletes Firestore document (`users/{uid}/settings/apiKey`) first, then Firebase auth record
 - Clears `sessionStorage` and calls `onLogout` — full wipe, nothing left behind
 
+## Spoke status + timeout fixes — 2026-03-25
+- **PROD spinner bug**: spokes 2 & 3 stayed visually `running` until all three resolved. Fixed by wrapping each spoke promise in its own `.then()` callback so status updates immediately on settlement (not after `Promise.allSettled`).
+- **Spoke 1 timeout (150s)**: Claude was making up to 10 `pause_turn` web-search iterations (~20-30s each). Capped the loop at 4 iterations in `callClaude`. Also added "use at most 3 web searches" to each spoke's system prompt. Worst-case is now ~120s, within the 150s timeout.
+
 ## UX improvements — 2026-03-24
 - Spoke error banner: red highlighted box when a spoke fails (was invisible in logs)
 - Iframe streaming debounce: 400ms throttle on `srcDoc` updates during report generation

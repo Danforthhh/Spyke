@@ -77,7 +77,7 @@ export async function callClaude(
   const messages: Anthropic.MessageParam[] = [{ role: 'user', content: user }]
   let fullText = ''
 
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 4; i++) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const response = await (client.messages.create as any)({
       model,
