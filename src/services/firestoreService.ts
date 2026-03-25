@@ -1,6 +1,6 @@
-import { doc, getDoc, setDoc, deleteField, updateDoc } from 'firebase/firestore'
+import { doc, getDoc, setDoc, deleteField, updateDoc, collection, addDoc, getDocs, deleteDoc, orderBy, query, serverTimestamp, Timestamp } from 'firebase/firestore'
 import { db } from './firebase'
-import type { EncryptedKeyBundle } from '../types'
+import type { EncryptedKeyBundle, SavedReport } from '../types'
 
 // Firestore path: users/{uid}/settings (single document per user)
 
@@ -30,4 +30,35 @@ export async function removeEncryptedKey(uid: string): Promise<void> {
     keySalt:      deleteField(),
     keyIv:        deleteField(),
   })
+}
+
+// ── Report persistence ──────────────────────────────────────────────────────
+// Path: users/{uid}/reports/{auto-id}
+// Firestore rules must allow: match /users/{uid}/reports/{r} { allow read, write: if request.auth.uid == uid; }
+
+export async function saveReport(uid: string, competitor: string, html: string): Promise<string> {
+  const ref = await addDoc(collection(db, 'users', uid, 'reports'), {
+    competitor,
+    html,
+    createdAt: serverTimestamp(),
+  })
+  return ref.id
+}
+
+export async function listReports(uid: string): Promise<SavedReport[]> {
+  const q = query(collection(db, 'users', uid, 'reports'), orderBy('createdAt', 'desc'))
+  const snap = await getDocs(q)
+  return snap.docs.map(d => {
+    const data = d.data()
+    return {
+      id: d.id,
+      competitor: data.competitor as string,
+      html: data.html as string,
+      createdAt: (data.createdAt as Timestamp)?.toMillis() ?? Date.now(),
+    }
+  })
+}
+
+export async function deleteReport(uid: string, reportId: string): Promise<void> {
+  await deleteDoc(doc(db, 'users', uid, 'reports', reportId))
 }

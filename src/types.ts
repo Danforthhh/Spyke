@@ -58,6 +58,13 @@ export interface Session {
   email: string
 }
 
+export interface SavedReport {
+  id: string
+  competitor: string
+  html: string
+  createdAt: number  // Unix timestamp ms
+}
+
 export const DEFAULT_MY_PRODUCT: MyProduct = {
   name: 'FlowDesk',
   category: 'B2B SaaS CRM',

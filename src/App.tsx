@@ -5,14 +5,14 @@ import AuthScreen from './components/AuthScreen'
 import AccountModal from './components/AccountModal'
 import UnlockModal from './components/UnlockModal'
 import DevModeToggle from './components/DevModeToggle'
-import type { SpokesState, ScraperData, SentimentData, PositioningData, MyProduct, Session } from './types'
+import type { SpokesState, ScraperData, SentimentData, PositioningData, MyProduct, Session, SavedReport } from './types'
 import { DEFAULT_MY_PRODUCT } from './types'
 import { runScraper } from './services/spokeScraper'
 import { runSentiment } from './services/spokeSentiment'
 import { runPositioning } from './services/spokePositioning'
 import { runReport } from './services/spokeReport'
 import { useAuth } from './hooks/useAuth'
-import { getUserSettings } from './services/firestoreService'
+import { getUserSettings, saveReport, listReports, deleteReport } from './services/firestoreService'
 import { decryptApiKey, getPersistedPassword } from './services/cryptoService'
 
 const LS_KEY = 'spyke_my_product'
@@ -61,6 +61,8 @@ export default function App() {
     sentiment: SentimentData | null
     positioning: PositioningData | null
   } | null>(null)
+  const [savedReports,     setSavedReports]     = useState<SavedReport[]>([])
+  const [showHistory,      setShowHistory]      = useState(false)
 
   // Stay in sync when DevModeToggle writes to localStorage
   useEffect(() => {
@@ -98,6 +100,9 @@ export default function App() {
         if (settings?.encryptedKey) setShowUnlock(true)
       })
     }
+
+    // Load saved report history
+    listReports(user.uid).then(setSavedReports).catch(() => {})
   }, [user])
 
   const handleLogin = (password: string) => {
@@ -117,6 +122,7 @@ export default function App() {
     setApiKey(null)
     setShowUnlock(false)
     setShowAccount(false)
+    setSavedReports([])
   }
 
   // ── Spoke helpers ────────────────────────────────────────────────────────
@@ -223,6 +229,12 @@ export default function App() {
         setReportHtml(html)
       }
       updateSpoke('report', { status: 'done' })
+      // Persist the completed report
+      if (session) {
+        saveReport(session.uid, competitor, html)
+          .then(id => setSavedReports(prev => [{ id, competitor, html, createdAt: Date.now() }, ...prev]))
+          .catch(() => {})
+      }
     } catch (e) {
       updateSpoke('report', { status: 'error' })
       addLog('report', `Error: ${e instanceof Error ? e.message : String(e)}`)
@@ -472,6 +484,67 @@ export default function App() {
               : 'Model: Sonnet 4.6 (spokes 1-3, web search) · Haiku 4.5 (report)'}
           </div>
         </div>
+
+        {/* Past reports */}
+        {savedReports.length > 0 && (
+          <div style={{ marginBottom: 32 }}>
+            <button
+              onClick={() => setShowHistory(h => !h)}
+              style={{
+                background: 'none', border: '1px solid #1e1e3a', borderRadius: 6,
+                color: '#888', fontSize: 13, fontFamily: 'monospace', cursor: 'pointer',
+                padding: '5px 12px', letterSpacing: 1,
+              }}
+            >
+              {showHistory ? '▾' : '▸'} PAST REPORTS ({savedReports.length})
+            </button>
+
+            {showHistory && (
+              <div style={{
+                marginTop: 12, padding: '8px 0', background: '#0d0d20',
+                border: '1px solid #1e1e3a', borderRadius: 8,
+              }}>
+                {savedReports.map(r => (
+                  <div
+                    key={r.id}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '8px 16px', borderBottom: '1px solid #1a1a30',
+                    }}
+                  >
+                    <span style={{ flex: 1, fontSize: 14, color: '#e0e0e0' }}>{r.competitor}</span>
+                    <span style={{ fontSize: 12, color: '#555', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+                      {new Date(r.createdAt).toLocaleDateString()} {new Date(r.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    <button
+                      onClick={() => { setCompetitor(r.competitor); setReportHtml(r.html); setShowHistory(false) }}
+                      style={{
+                        padding: '4px 12px', background: 'none', border: '1px solid #2a2a4a',
+                        borderRadius: 6, color: '#aaa', fontSize: 12, cursor: 'pointer',
+                      }}
+                    >
+                      Load
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (!session) return
+                        deleteReport(session.uid, r.id)
+                          .then(() => setSavedReports(prev => prev.filter(x => x.id !== r.id)))
+                          .catch(() => {})
+                      }}
+                      style={{
+                        padding: '4px 8px', background: 'none', border: '1px solid #3a1a1a',
+                        borderRadius: 6, color: '#7a3a3a', fontSize: 12, cursor: 'pointer',
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Spokes progress */}
         {spokes.scraper.status !== 'idle' && (
