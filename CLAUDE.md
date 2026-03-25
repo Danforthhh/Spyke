@@ -179,6 +179,15 @@ To update review criteria: edit `.claude/agents/code-reviewer.md` — no `settin
 **Files deleted:**
 - `src/components/ApiKeyModal.tsx` — legacy unused component (replaced by AccountModal)
 
+## Account deletion — 2026-03-25
+**Context:** Security gap — users had no way to fully remove their data from Firebase.
+
+**Chosen:** Delete account button in `AccountModal` with two-step confirmation
+- Step 1: "Delete account" button (muted red) → expands to warning + Confirm/Cancel
+- Step 2: Re-authenticates with `sessionPassword` via `reauthenticateWithCredential` (Firebase requirement for sensitive operations)
+- Deletes Firestore document (`users/{uid}/settings/apiKey`) first, then Firebase auth record
+- Clears `sessionStorage` and calls `onLogout` — full wipe, nothing left behind
+
 ## UX improvements — 2026-03-24
 - Spoke error banner: red highlighted box when a spoke fails (was invisible in logs)
 - Iframe streaming debounce: 400ms throttle on `srcDoc` updates during report generation
