@@ -5,29 +5,16 @@ import AuthScreen from './components/AuthScreen'
 import AccountModal from './components/AccountModal'
 import UnlockModal from './components/UnlockModal'
 import DevModeToggle from './components/DevModeToggle'
-import type { SpokesState, ScraperData, SentimentData, PositioningData, MyProduct, Session, SavedReport } from './types'
+import ProductPicker from './components/ProductPicker'
+import type { SpokesState, ScraperData, SentimentData, PositioningData, MyProduct, Session, SavedReport, SharedProduct } from './types'
 import { DEFAULT_MY_PRODUCT } from './types'
 import { runScraper } from './services/spokeScraper'
 import { runSentiment } from './services/spokeSentiment'
 import { runPositioning } from './services/spokePositioning'
 import { runReport } from './services/spokeReport'
 import { useAuth } from './hooks/useAuth'
-import { getUserSettings, saveReport, listReports, deleteReport } from './services/firestoreService'
+import { getUserSettings, saveReport, listReports, deleteReport, listSharedProducts, addSharedProduct, getFavoriteProductId, setFavoriteProductId as saveFavoriteProductId, seedSharedProducts } from './services/firestoreService'
 import { decryptApiKey, getPersistedPassword } from './services/cryptoService'
-
-const LS_KEY = 'spyke_my_product'
-
-function loadMyProduct(): MyProduct {
-  try {
-    const raw = localStorage.getItem(LS_KEY)
-    if (raw) return { ...DEFAULT_MY_PRODUCT, ...JSON.parse(raw) }
-  } catch { /* ignore */ }
-  return DEFAULT_MY_PRODUCT
-}
-
-function saveMyProduct(p: MyProduct) {
-  localStorage.setItem(LS_KEY, JSON.stringify(p))
-}
 
 const INITIAL_SPOKES: SpokesState = {
   scraper: { status: 'idle', log: [] },
@@ -54,8 +41,10 @@ export default function App() {
   const [streaming,        setStreaming]        = useState(false)
   const [deepLoading,      setDeepLoading]      = useState(false)
   const [running,          setRunning]          = useState(false)
-  const [myProduct,        setMyProduct]        = useState<MyProduct>(loadMyProduct)
-  const [showProductConfig, setShowProductConfig] = useState(false)
+  const [myProduct,        setMyProduct]        = useState<MyProduct>(DEFAULT_MY_PRODUCT)
+  const [sharedProducts,   setSharedProducts]   = useState<SharedProduct[]>([])
+  const [favoriteProductId, setFavoriteProductId] = useState<string | null>(null)
+  const [showProductPicker, setShowProductPicker] = useState(false)
   const [devMode,          setDevMode]          = useState(() => localStorage.getItem('devMode') === 'true')
   const [lastResults,      setLastResults]      = useState<{
     scraper: ScraperData | null
@@ -81,6 +70,9 @@ export default function App() {
       setSessionPassword(null)
       setApiKey(null)
       setShowUnlock(false)
+      setSharedProducts([])
+      setFavoriteProductId(null)
+      setMyProduct(DEFAULT_MY_PRODUCT)
       return
     }
 
@@ -104,7 +96,31 @@ export default function App() {
     }
 
     // Load saved report history
-    listReports(user.uid).then(setSavedReports).catch(() => {})
+    listReports(user.uid).then(setSavedReports).catch(err => console.warn('Failed to load reports:', err))
+
+    // Load shared product database + user favorite
+    Promise.all([
+      listSharedProducts(),
+      getFavoriteProductId(user.uid),
+    ]).then(async ([products, favId]) => {
+      // Seed if the shared list is empty
+      if (products.length === 0) {
+        await seedSharedProducts(user.uid)
+        const seeded = await listSharedProducts()
+        setSharedProducts(seeded)
+        if (favId) {
+          const fav = seeded.find(p => p.id === favId)
+          if (fav) setMyProduct(fav)
+        }
+      } else {
+        setSharedProducts(products)
+        if (favId) {
+          const fav = products.find(p => p.id === favId)
+          if (fav) setMyProduct(fav)
+        }
+      }
+      setFavoriteProductId(favId)
+    }).catch(err => console.warn('Failed to load shared products:', err))
   }, [user])
 
   const handleLogin = (password: string) => {
@@ -125,6 +141,26 @@ export default function App() {
     setShowUnlock(false)
     setShowAccount(false)
     setSavedReports([])
+    setSharedProducts([])
+    setFavoriteProductId(null)
+    setMyProduct(DEFAULT_MY_PRODUCT)
+  }
+
+  const handleSelectProduct = (product: SharedProduct) => {
+    setMyProduct(product)
+  }
+
+  const handleSetFavorite = async (productId: string | null) => {
+    if (!session) return
+    setFavoriteProductId(productId)
+    await saveFavoriteProductId(session.uid, productId).catch(() => {})
+  }
+
+  const handleAddProduct = async (product: MyProduct) => {
+    if (!session) return
+    const id = await addSharedProduct(session.uid, product)
+    const newProduct: SharedProduct = { ...product, id, createdBy: session.uid, createdAt: Date.now() }
+    setSharedProducts(prev => [...prev, newProduct].sort((a, b) => a.name.localeCompare(b.name)))
   }
 
   // ── Spoke helpers ────────────────────────────────────────────────────────
@@ -365,92 +401,45 @@ export default function App() {
       {/* Main */}
       <main style={{ maxWidth: 860, margin: '0 auto', padding: '40px 20px' }}>
 
-        {/* Your product config */}
-        <div style={{ marginBottom: 32 }}>
+        {/* Your product */}
+        <div style={{ marginBottom: 32, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ fontSize: 11, color: '#888', letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+            YOUR PRODUCT
+          </div>
+          <div style={{
+            flex: 1, padding: '8px 14px', background: '#0d0d20',
+            border: '1px solid #1e1e3a', borderRadius: 6,
+            display: 'flex', alignItems: 'center', gap: 10, minWidth: 0,
+          }}>
+            <span style={{ fontSize: 14, color: '#e0e0e0', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {myProduct.name}
+            </span>
+            {myProduct.category && (
+              <span style={{ fontSize: 11, color: '#555', whiteSpace: 'nowrap' }}>{myProduct.category}</span>
+            )}
+          </div>
           <button
-            onClick={() => setShowProductConfig(p => !p)}
+            onClick={() => setShowProductPicker(true)}
             style={{
-              background: 'none', border: '1px solid #1e1e3a', borderRadius: 6,
-              color: '#888', fontSize: 13, fontFamily: 'monospace', cursor: 'pointer',
-              padding: '5px 12px', letterSpacing: 1,
+              background: 'none', border: '1px solid #2a2a4a', borderRadius: 6,
+              color: '#aaa', fontSize: 12, cursor: 'pointer', padding: '6px 14px',
+              whiteSpace: 'nowrap',
             }}
           >
-            {showProductConfig ? '▾' : '▸'} YOUR PRODUCT: {myProduct.name}
+            Change
           </button>
-
-          {showProductConfig && (
-            <div style={{
-              marginTop: 12, padding: 20, background: '#0d0d20',
-              border: '1px solid #1e1e3a', borderRadius: 8, display: 'grid', gap: 12,
-            }}>
-              {([
-                ['name', 'Product name', myProduct.name],
-                ['category', 'Category (e.g. B2B SaaS CRM)', myProduct.category],
-                ['tagline', 'Tagline', myProduct.tagline],
-              ] as [keyof MyProduct, string, string][]).map(([field, label, value]) => (
-                <div key={field}>
-                  <div style={{ fontSize: 11, color: '#888', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>{label}</div>
-                  <input
-                    value={value as string}
-                    onChange={e => {
-                      const updated = { ...myProduct, [field]: e.target.value }
-                      setMyProduct(updated)
-                      saveMyProduct(updated)
-                    }}
-                    style={{
-                      width: '100%', padding: '8px 12px', background: '#0a0a1a',
-                      border: '1px solid #2a2a4a', borderRadius: 6, color: '#e0e0e0',
-                      fontSize: 14, outline: 'none',
-                    }}
-                  />
-                </div>
-              ))}
-              <div>
-                <div style={{ fontSize: 11, color: '#888', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>Positioning (1–2 sentences)</div>
-                <textarea
-                  value={myProduct.positioning}
-                  rows={2}
-                  onChange={e => {
-                    const updated = { ...myProduct, positioning: e.target.value }
-                    setMyProduct(updated)
-                    saveMyProduct(updated)
-                  }}
-                  style={{
-                    width: '100%', padding: '8px 12px', background: '#0a0a1a',
-                    border: '1px solid #2a2a4a', borderRadius: 6, color: '#e0e0e0',
-                    fontSize: 14, outline: 'none', resize: 'vertical', fontFamily: 'inherit',
-                  }}
-                />
-              </div>
-              <div>
-                <div style={{ fontSize: 11, color: '#888', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 }}>Features (one per line)</div>
-                <textarea
-                  value={myProduct.features.join('\n')}
-                  rows={5}
-                  onChange={e => {
-                    const updated = { ...myProduct, features: e.target.value.split('\n') }
-                    setMyProduct(updated)
-                    saveMyProduct(updated)
-                  }}
-                  style={{
-                    width: '100%', padding: '8px 12px', background: '#0a0a1a',
-                    border: '1px solid #2a2a4a', borderRadius: 6, color: '#e0e0e0',
-                    fontSize: 14, outline: 'none', resize: 'vertical', fontFamily: 'monospace',
-                  }}
-                />
-              </div>
-              <button
-                onClick={() => { setMyProduct(DEFAULT_MY_PRODUCT); saveMyProduct(DEFAULT_MY_PRODUCT) }}
-                style={{
-                  alignSelf: 'flex-start', background: 'none', border: '1px solid #2a2a4a',
-                  borderRadius: 6, color: '#888', fontSize: 12, cursor: 'pointer', padding: '4px 10px',
-                }}
-              >
-                Reset to FlowDesk demo
-              </button>
-            </div>
-          )}
         </div>
+
+        {showProductPicker && (
+          <ProductPicker
+            products={sharedProducts}
+            favoriteId={favoriteProductId}
+            onSelect={handleSelectProduct}
+            onSetFavorite={handleSetFavorite}
+            onAddProduct={handleAddProduct}
+            onClose={() => setShowProductPicker(false)}
+          />
+        )}
 
         {/* Input */}
         <div style={{ marginBottom: 40 }}>

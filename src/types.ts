@@ -65,6 +65,12 @@ export interface SavedReport {
   createdAt: number  // Unix timestamp ms
 }
 
+export interface SharedProduct extends MyProduct {
+  id: string
+  createdBy: string  // uid of the user who added it
+  createdAt: number  // Unix timestamp ms
+}
+
 export const DEFAULT_MY_PRODUCT: MyProduct = {
   name: 'FlowDesk',
   category: 'B2B SaaS CRM',

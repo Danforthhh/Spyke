@@ -94,9 +94,10 @@ Spokes 1–3 send `web_search_20260209` + `web_fetch_20260209` tools. In DEV mod
 - Timeout per spoke: **150s** (increased from 90s to accommodate Groq retry waits)
 
 ## Your product configuration
-- Stored in `localStorage` under key `spyke_my_product`
-- Falls back to `DEFAULT_MY_PRODUCT` (FlowDesk demo) if not set
-- Configurable via `▸ YOUR PRODUCT` collapsible above the competitor input
+- Loaded from Firestore shared collection `products/` on login
+- User's favorite product stored at `users/{uid}/settings/preferences` (`favoriteProductId` field)
+- If no favorite is set, defaults to `DEFAULT_MY_PRODUCT` (FlowDesk demo)
+- Picker UI: compact card + "Change" button → `ProductPicker` modal with search, favorites, add form
 - Spoke 3 generates SWOT for the **competitor**, not our product
 
 ## Streaming (Spoke 4)
@@ -206,3 +207,27 @@ To update review criteria: edit `.claude/agents/code-reviewer.md` — no `settin
 - SWOT layout: explicit 2×2 CSS grid (was overflowing to 3+1)
 - SWOT subject: explicitly the **competitor's** SWOT (was generating our product's SWOT)
 - Report writer: full `myProduct` data included in prompt (was only passing product name)
+
+## Shared product database — 2026-04-09
+**Context:** "Your product" was stored in localStorage (single-device, lost on browser clear). Needed a cross-user, cross-device shared product list with favorites.
+
+**Options considered:**
+- **localStorage** — simple, no Firestore reads, but local-only
+- **Firestore per-user** — persistent across devices, but products not shared
+- **Firestore shared collection `products/`** (chosen) — cross-user, cross-device, seedable
+
+**Chosen:** Firestore `products/` collection (shared) + `users/{uid}/settings/preferences` (favorite)
+- Any authenticated user can read or add products; only the creator can update/delete their own entries
+- Seed products use `createdBy: '__system__'` to avoid false attribution
+- `addSharedProduct()` validates `auth.currentUser.uid === uid` before writing (defense-in-depth)
+- Input validation in `ProductPicker`: max 100 chars (name/category), 200 (tagline), 500 (positioning), 50 features
+- 16 products pre-seeded on first login (ProTop + 15 mid-market SaaS tools)
+- `localStorage` product config removed entirely
+
+**Firestore rules required:**
+```
+match /products/{productId} {
+  allow read, create: if request.auth != null;
+  allow update, delete: if request.auth.uid == resource.data.createdBy;
+}
+```
