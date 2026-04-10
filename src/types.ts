@@ -58,6 +58,13 @@ export interface Session {
   email: string
 }
 
+export interface CompetitorAnalysis {
+  name: string
+  scraper: ScraperData | null
+  sentiment: SentimentData | null
+  positioning: PositioningData | null
+}
+
 export interface SavedReport {
   id: string
   competitor: string

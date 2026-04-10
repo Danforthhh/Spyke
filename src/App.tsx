@@ -7,12 +7,13 @@ import AccountModal from './components/AccountModal'
 import UnlockModal from './components/UnlockModal'
 import DevModeToggle from './components/DevModeToggle'
 import ProductPicker from './components/ProductPicker'
-import type { SpokesState, ScraperData, SentimentData, PositioningData, MyProduct, Session, SavedReport, SharedProduct } from './types'
+import type { SpokesState, SpokeState, ScraperData, SentimentData, PositioningData, MyProduct, Session, SavedReport, SharedProduct, CompetitorAnalysis } from './types'
 import { DEFAULT_MY_PRODUCT } from './types'
 import { runScraper } from './services/spokeScraper'
 import { runSentiment } from './services/spokeSentiment'
 import { runPositioning } from './services/spokePositioning'
 import { runReport } from './services/spokeReport'
+import { runComparisonReport } from './services/spokeComparisonReport'
 import { useAuth } from './hooks/useAuth'
 import { getUserSettings, saveReport, listReports, deleteReport, saveEncryptedKey, listSharedProducts, addSharedProduct, getFavoriteProductId, setFavoriteProductId as saveFavoriteProductId, seedSharedProducts } from './services/firestoreService'
 import { decryptApiKey, getPersistedPassword, encryptApiKey } from './services/cryptoService'
@@ -71,6 +72,14 @@ export default function App() {
   const [showProductPicker, setShowProductPicker] = useState(false)
   const [devMode,           setDevMode]           = useState(() => localStorage.getItem('devMode') === 'true')
   const [showDemo,          setShowDemo]          = useState(false)
+
+  // ── Compare mode ─────────────────────────────────────────────────────────
+  const [analysisMode,       setAnalysisMode]       = useState<'single' | 'compare'>('single')
+  const [compareNames,       setCompareNames]       = useState<string[]>(['', ''])
+  const [compareSpokes,      setCompareSpokes]      = useState<
+    Record<string, { scraper: SpokeState; sentiment: SpokeState; positioning: SpokeState }>
+  >({})
+  const [compareReportSpoke, setCompareReportSpoke] = useState<SpokeState>({ status: 'idle', log: [] })
   const [lastResults,       setLastResults]       = useState<{
     scraper: ScraperData | null
     sentiment: SentimentData | null
@@ -333,6 +342,133 @@ export default function App() {
     }
   }
 
+  const handleCompare = async () => {
+    const names = compareNames.map(n => n.trim()).filter(Boolean)
+    if (names.length < 2 || running) return
+
+    setRunning(true)
+    setReportHtml('')
+    setReportDate(undefined)
+    setLastResults(null)
+    setCompareReportSpoke({ status: 'idle', log: [] })
+
+    const initSpokes = () => Object.fromEntries(
+      names.map(n => [n, {
+        scraper:     { status: 'idle' as const, log: [] },
+        sentiment:   { status: 'idle' as const, log: [] },
+        positioning: { status: 'idle' as const, log: [] },
+      }])
+    )
+    setCompareSpokes(initSpokes())
+
+    const TIMEOUT = 150_000
+    const key     = apiKey
+    const focusSnapshot = focus.trim() || undefined
+    const isDev   = localStorage.getItem('devMode') === 'true'
+
+    const updateCS = (name: string, spoke: 'scraper' | 'sentiment' | 'positioning', patch: Partial<SpokeState>) =>
+      setCompareSpokes(prev => ({
+        ...prev,
+        [name]: { ...prev[name], [spoke]: { ...prev[name]?.[spoke], ...patch } }
+      }))
+
+    const addCSLog = (name: string, spoke: 'scraper' | 'sentiment' | 'positioning', msg: string) =>
+      setCompareSpokes(prev => {
+        const log = prev[name]?.[spoke]?.log ?? []
+        return { ...prev, [name]: { ...prev[name], [spoke]: { ...prev[name]?.[spoke], log: [...log, msg] } } }
+      })
+
+    const addCRLog = (msg: string) =>
+      setCompareReportSpoke(prev => ({ ...prev, log: [...prev.log, msg] }))
+
+    const settle = <T,>(p: Promise<T>): Promise<PromiseSettledResult<T>> =>
+      p.then((v): PromiseSettledResult<T> => ({ status: 'fulfilled', value: v }))
+       .catch((r): PromiseSettledResult<T> => ({ status: 'rejected', reason: r }))
+
+    const errMsg = (r: unknown) => r instanceof Error ? r.message : String(r)
+
+    const productSnapshot: MyProduct = JSON.parse(JSON.stringify(myProduct))
+    const results: CompetitorAnalysis[] = []
+
+    try {
+      if (isDev) {
+        addCRLog('⚡ DEV mode: running comparison sequentially to avoid Groq rate limits')
+        for (const name of names) {
+          updateCS(name, 'scraper', { status: 'running' })
+          const sr = await settle(withTimeout(runScraper(name, msg => addCSLog(name, 'scraper', msg), key, focusSnapshot), TIMEOUT, 'Scraper'))
+          updateCS(name, 'scraper', { status: sr.status === 'fulfilled' ? 'done' : 'error' })
+          if (sr.status === 'rejected') addCSLog(name, 'scraper', `Error: ${errMsg(sr.reason)}`)
+
+          updateCS(name, 'sentiment', { status: 'running' })
+          const se = await settle(withTimeout(runSentiment(name, msg => addCSLog(name, 'sentiment', msg), key, focusSnapshot), TIMEOUT, 'Sentiment'))
+          updateCS(name, 'sentiment', { status: se.status === 'fulfilled' ? 'done' : 'error' })
+          if (se.status === 'rejected') addCSLog(name, 'sentiment', `Error: ${errMsg(se.reason)}`)
+
+          updateCS(name, 'positioning', { status: 'running' })
+          const po = await settle(withTimeout(runPositioning(name, productSnapshot, msg => addCSLog(name, 'positioning', msg), key, focusSnapshot), TIMEOUT, 'Positioning'))
+          updateCS(name, 'positioning', { status: po.status === 'fulfilled' ? 'done' : 'error' })
+          if (po.status === 'rejected') addCSLog(name, 'positioning', `Error: ${errMsg(po.reason)}`)
+
+          results.push({
+            name,
+            scraper:     sr.status === 'fulfilled' ? sr.value : null,
+            sentiment:   se.status === 'fulfilled' ? se.value : null,
+            positioning: po.status === 'fulfilled' ? po.value : null,
+          })
+        }
+      } else {
+        // PROD: all N×3 spokes in parallel
+        names.forEach(name => {
+          updateCS(name, 'scraper',     { status: 'running' })
+          updateCS(name, 'sentiment',   { status: 'running' })
+          updateCS(name, 'positioning', { status: 'running' })
+        })
+        await Promise.all(names.map(async name => {
+          const [sr, se, po] = await Promise.all([
+            settle(withTimeout(runScraper(name, msg => addCSLog(name, 'scraper', msg), key, focusSnapshot), TIMEOUT, 'Scraper'))
+              .then(r => { updateCS(name, 'scraper', { status: r.status === 'fulfilled' ? 'done' : 'error' }); if (r.status === 'rejected') addCSLog(name, 'scraper', `Error: ${errMsg(r.reason)}`); return r }),
+            settle(withTimeout(runSentiment(name, msg => addCSLog(name, 'sentiment', msg), key, focusSnapshot), TIMEOUT, 'Sentiment'))
+              .then(r => { updateCS(name, 'sentiment', { status: r.status === 'fulfilled' ? 'done' : 'error' }); if (r.status === 'rejected') addCSLog(name, 'sentiment', `Error: ${errMsg(r.reason)}`); return r }),
+            settle(withTimeout(runPositioning(name, productSnapshot, msg => addCSLog(name, 'positioning', msg), key, focusSnapshot), TIMEOUT, 'Positioning'))
+              .then(r => { updateCS(name, 'positioning', { status: r.status === 'fulfilled' ? 'done' : 'error' }); if (r.status === 'rejected') addCSLog(name, 'positioning', `Error: ${errMsg(r.reason)}`); return r }),
+          ])
+          results.push({
+            name,
+            scraper:     sr.status === 'fulfilled' ? sr.value : null,
+            sentiment:   se.status === 'fulfilled' ? se.value : null,
+            positioning: po.status === 'fulfilled' ? po.value : null,
+          })
+        }))
+      }
+
+      setCompareReportSpoke(prev => ({ ...prev, status: 'running' }))
+      setStreaming(true)
+      let html = ''
+      try {
+        for await (const chunk of runComparisonReport(results, productSnapshot, key, focusSnapshot)) {
+          html += chunk
+          setReportHtml(html)
+        }
+        setCompareReportSpoke(prev => ({ ...prev, status: 'done' }))
+        const now = Date.now()
+        setReportDate(now)
+        const label = names.join(' vs ')
+        if (session) {
+          saveReport(session.uid, label, html)
+            .then(id => setSavedReports(prev => [{ id, competitor: label, html, createdAt: now }, ...prev]))
+            .catch(() => {})
+        }
+      } catch (e) {
+        setCompareReportSpoke(prev => ({ ...prev, status: 'error' }))
+        addCRLog(`Error: ${e instanceof Error ? e.message : String(e)}`)
+      } finally {
+        setStreaming(false)
+      }
+    } finally {
+      setRunning(false)
+    }
+  }
+
   // ── Render guards ────────────────────────────────────────────────────────
   if (loading) {
     return (
@@ -369,6 +505,7 @@ export default function App() {
 
   const spokesActive = spokes.scraper.status !== 'idle'
   const analyzing    = running && !reportHtml
+  const compareLabel = compareNames.filter(n => n.trim()).join(' vs ')
 
   // ── Main app ──────────────────────────────────────────────────────────────
   return (
@@ -470,44 +607,99 @@ export default function App() {
               </div>
             </div>
 
-            {/* Competitor input */}
+            {/* Analysis mode tabs + inputs */}
             <div>
-              <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Competitor</div>
-              <div className="flex gap-2">
-                <input
-                  value={competitor}
-                  onChange={e => setCompetitor(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleAnalyze()}
-                  placeholder="HubSpot, Salesforce…"
-                  maxLength={200}
-                  disabled={running}
-                  className="flex-1 px-3.5 py-2.5 text-base bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/50 transition-all disabled:opacity-50"
-                />
-                <button
-                  onClick={() => handleAnalyze()}
-                  disabled={running || !competitor.trim()}
-                  className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-colors whitespace-nowrap ${
-                    running || !competitor.trim()
-                      ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-600 cursor-not-allowed'
-                      : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-200 dark:shadow-indigo-900/40 cursor-pointer'
-                  }`}
-                >
-                  {running ? '…' : 'Analyze'}
-                </button>
+              {/* Mode tabs */}
+              <div className="flex gap-4 mb-4 border-b border-slate-100 dark:border-slate-800 pb-3">
+                {(['single', 'compare'] as const).map(m => (
+                  <button
+                    key={m}
+                    onClick={() => { setAnalysisMode(m); setSpokes(INITIAL_SPOKES); setCompareSpokes({}); setCompareReportSpoke({ status: 'idle', log: [] }) }}
+                    disabled={running}
+                    className={`text-sm font-semibold pb-1 transition-colors cursor-pointer bg-transparent border-0 disabled:cursor-not-allowed ${
+                      analysisMode === m
+                        ? 'text-indigo-600 dark:text-indigo-400'
+                        : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+                    }`}
+                    style={{ borderBottom: analysisMode === m ? '2px solid #6366f1' : '2px solid transparent' }}
+                  >
+                    {m === 'single' ? 'Analyze' : 'Compare'}
+                  </button>
+                ))}
               </div>
 
-              {/* Quick-pick chips (Fix 3A) */}
-              {!running && (
-                <div className="flex flex-wrap gap-1.5 mt-2.5">
-                  {QUICK_PICKS.map(name => (
+              {analysisMode === 'single' ? (
+                <>
+                  <div className="flex gap-2">
+                    <input
+                      value={competitor}
+                      onChange={e => setCompetitor(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleAnalyze()}
+                      placeholder="HubSpot, Salesforce…"
+                      maxLength={200}
+                      disabled={running}
+                      className="flex-1 px-3.5 py-2.5 text-base bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/50 transition-all disabled:opacity-50"
+                    />
                     <button
-                      key={name}
-                      onClick={() => handleAnalyze(name)}
-                      className="px-2.5 py-1 text-xs font-medium rounded-full border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors cursor-pointer bg-white dark:bg-slate-800"
+                      onClick={() => handleAnalyze()}
+                      disabled={running || !competitor.trim()}
+                      className={`px-5 py-2.5 text-sm font-semibold rounded-lg transition-colors whitespace-nowrap ${
+                        running || !competitor.trim()
+                          ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-600 cursor-not-allowed'
+                          : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-200 dark:shadow-indigo-900/40 cursor-pointer'
+                      }`}
                     >
-                      {name}
+                      {running ? '…' : 'Analyze'}
                     </button>
+                  </div>
+
+                  {!running && (
+                    <div className="flex flex-wrap gap-1.5 mt-2.5">
+                      {QUICK_PICKS.map(name => (
+                        <button
+                          key={name}
+                          onClick={() => handleAnalyze(name)}
+                          className="px-2.5 py-1 text-xs font-medium rounded-full border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-indigo-300 dark:hover:border-indigo-700 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 transition-colors cursor-pointer bg-white dark:bg-slate-800"
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                /* Compare mode inputs */
+                <div className="space-y-2">
+                  {compareNames.map((name, i) => (
+                    <div key={i} className="flex gap-2 items-center">
+                      <input
+                        value={name}
+                        onChange={e => setCompareNames(prev => prev.map((n, j) => j === i ? e.target.value : n))}
+                        placeholder={`Competitor ${i + 1}…`}
+                        maxLength={200}
+                        disabled={running}
+                        className="flex-1 px-3.5 py-2.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/50 transition-all disabled:opacity-50"
+                      />
+                      {compareNames.length > 2 && (
+                        <button
+                          onClick={() => setCompareNames(prev => prev.filter((_, j) => j !== i))}
+                          disabled={running}
+                          className="text-slate-300 dark:text-slate-600 hover:text-red-400 dark:hover:text-red-500 text-lg leading-none bg-transparent border-0 cursor-pointer transition-colors disabled:cursor-not-allowed flex-shrink-0"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
                   ))}
+                  {compareNames.length < 4 && (
+                    <button
+                      onClick={() => setCompareNames(prev => [...prev, ''])}
+                      disabled={running}
+                      className="text-xs text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors cursor-pointer bg-transparent border-0 disabled:cursor-not-allowed"
+                    >
+                      + Add competitor
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -518,6 +710,21 @@ export default function App() {
                 disabled={running}
                 className="mt-3 w-full px-3.5 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/50 transition-all disabled:opacity-50"
               />
+
+              {analysisMode === 'compare' && (
+                <button
+                  onClick={handleCompare}
+                  disabled={running || compareNames.filter(n => n.trim()).length < 2}
+                  className={`mt-3 w-full py-2.5 text-sm font-semibold rounded-lg transition-colors ${
+                    running || compareNames.filter(n => n.trim()).length < 2
+                      ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-600 cursor-not-allowed'
+                      : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-200 dark:shadow-indigo-900/40 cursor-pointer'
+                  }`}
+                >
+                  {running ? '…' : 'Compare'}
+                </button>
+              )}
+
               <p className="mt-1.5 text-xs text-slate-400 dark:text-slate-500">
                 {devMode
                   ? 'Groq Llama 3.3 70B · Tavily search'
@@ -574,8 +781,8 @@ export default function App() {
             )}
           </div>
 
-          {/* Research spokes */}
-          {spokesActive && (
+          {/* Research spokes — single mode */}
+          {spokesActive && analysisMode === 'single' && (
             <div className="px-6 pb-6 space-y-2 border-t border-slate-100 dark:border-slate-800 pt-5">
               <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Research spokes</div>
               <SpokeLog name="SPOKE 1" label="Web Scraper"         status={spokes.scraper.status}     log={spokes.scraper.log}     model={devMode ? 'groq:llama-3.3-70b' : 'sonnet-4.6'} />
@@ -585,11 +792,46 @@ export default function App() {
             </div>
           )}
 
+          {/* Research spokes — compare mode */}
+          {analysisMode === 'compare' && Object.keys(compareSpokes).length > 0 && (
+            <div className="px-6 pb-6 border-t border-slate-100 dark:border-slate-800 pt-5">
+              <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-3">Research spokes</div>
+              {/* Header row */}
+              <div className="grid gap-x-3 mb-1 px-1 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-widest" style={{ gridTemplateColumns: '1fr 52px 52px 52px' }}>
+                <span></span><span className="text-center">Scrape</span><span className="text-center">Sent.</span><span className="text-center">Pos.</span>
+              </div>
+              {Object.entries(compareSpokes).map(([name, s]) => (
+                <div key={name} className="grid gap-x-3 items-center py-1 px-1" style={{ gridTemplateColumns: '1fr 52px 52px 52px' }}>
+                  <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">{name}</span>
+                  {(['scraper', 'sentiment', 'positioning'] as const).map(spoke => {
+                    const st = s[spoke].status
+                    return (
+                      <span key={spoke} className={`text-center text-sm ${
+                        st === 'idle'    ? 'text-slate-300 dark:text-slate-600' :
+                        st === 'running' ? 'text-indigo-400 animate-pulse' :
+                        st === 'done'    ? 'text-emerald-500' : 'text-red-400'
+                      }`}>
+                        {st === 'idle' ? '–' : st === 'running' ? '●' : st === 'done' ? '✓' : '✗'}
+                      </span>
+                    )
+                  })}
+                </div>
+              ))}
+              <div className="mt-3">
+                <SpokeLog name="COMPARE" label="Comparison Report" status={compareReportSpoke.status} log={compareReportSpoke.log} model={devMode ? 'groq:llama-3.3-70b' : 'haiku-4.5'} />
+              </div>
+            </div>
+          )}
+
           {/* Empty state */}
-          {!spokesActive && (
+          {!spokesActive && !(analysisMode === 'compare' && Object.keys(compareSpokes).length > 0) && (
             <div className="flex-1 flex flex-col items-center justify-center text-center px-6 pb-12 text-slate-400 dark:text-slate-600">
               <div className="text-3xl mb-3 opacity-30">◎</div>
-              <p className="text-base text-slate-500 dark:text-slate-500">Pick a competitor above or click a quick-pick chip to start</p>
+              <p className="text-base text-slate-500 dark:text-slate-500">
+                {analysisMode === 'single'
+                  ? 'Pick a competitor above or click a quick-pick chip to start'
+                  : 'Enter at least 2 competitors and click Compare'}
+              </p>
             </div>
           )}
         </div>
@@ -601,10 +843,10 @@ export default function App() {
               html={reportHtml}
               streaming={streaming}
               reportDate={reportDate}
-              onDeepAnalysis={!streaming ? handleDeepAnalysis : undefined}
+              onDeepAnalysis={!streaming && analysisMode === 'single' ? handleDeepAnalysis : undefined}
               deepLoading={deepLoading}
               analyzing={analyzing}
-              competitorName={competitor}
+              competitorName={analysisMode === 'compare' ? compareLabel : competitor}
               spokeStatus={spokeStatus}
             />
           ) : (
