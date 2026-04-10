@@ -394,9 +394,15 @@ export default function App() {
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 px-6 py-3.5 flex items-center gap-4 flex-shrink-0">
         {/* Logo */}
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-slate-900 dark:bg-slate-100 flex items-center justify-center flex-shrink-0">
-            <span className="text-white dark:text-slate-900 text-xs font-black tracking-tighter">S</span>
-          </div>
+          <svg viewBox="0 0 32 32" className="w-8 h-8 flex-shrink-0" xmlns="http://www.w3.org/2000/svg">
+            <rect width="32" height="32" rx="6" fill="#0f0f23"/>
+            <circle cx="16" cy="16" r="10" fill="none" stroke="#6c63ff" strokeWidth="1.5"/>
+            <line x1="16" y1="3"    x2="16" y2="9.5"  stroke="#6c63ff" strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="16" y1="22.5" x2="16" y2="29"   stroke="#6c63ff" strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="3"  y1="16"   x2="9.5" y2="16"  stroke="#6c63ff" strokeWidth="1.5" strokeLinecap="round"/>
+            <line x1="22.5" y1="16" x2="29" y2="16"   stroke="#6c63ff" strokeWidth="1.5" strokeLinecap="round"/>
+            <circle cx="16" cy="16" r="2.5" fill="#6c63ff"/>
+          </svg>
           <div>
             <div className="text-sm font-bold text-slate-900 dark:text-slate-100 tracking-tight leading-none">Spyke</div>
             <div className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">Competitive Intelligence</div>

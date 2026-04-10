@@ -146,16 +146,10 @@ export default function DevModeToggle({ devMode, hasApiKey, onToggle, onSaveKey 
       </button>
 
       {showKeyForm && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 10px)', right: 0,
-          background: '#12122a', border: '1px solid #2a2a4a', borderRadius: 10,
-          padding: '16px', width: 300,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-          zIndex: 200,
-        }}>
-          <div style={{ fontSize: 12, color: '#888', marginBottom: 10, lineHeight: 1.6 }}>
+        <div className="absolute top-full mt-2 right-0 w-72 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-xl z-50">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 leading-relaxed">
             PROD mode uses your Anthropic API key.
-          </div>
+          </p>
           <input
             type="password"
             placeholder="sk-ant-..."
@@ -164,41 +158,29 @@ export default function DevModeToggle({ devMode, hasApiKey, onToggle, onSaveKey 
             onKeyDown={e => e.key === 'Enter' && !saving && handleSave()}
             autoFocus
             autoComplete="off"
-            style={{
-              width: '100%', padding: '8px 10px', marginBottom: 8,
-              background: '#0a0a1a', border: '1px solid #2a2a4a',
-              borderRadius: 6, color: '#e0e0e0', fontSize: 12,
-              outline: 'none', fontFamily: 'monospace', boxSizing: 'border-box',
-            }}
+            className="w-full px-3 py-2 mb-2 text-xs font-mono bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/50 transition-all"
           />
-          <div style={{ display: 'flex', gap: 6 }}>
+          <div className="flex gap-2">
             <button
               onClick={handleSave}
               disabled={saving || !keyInput.trim()}
-              style={{
-                flex: 1, padding: '7px 0',
-                background: saving || !keyInput.trim() ? '#1a1a3a' : '#6c63ff',
-                border: 'none', borderRadius: 6,
-                color: saving || !keyInput.trim() ? '#555' : '#fff',
-                fontSize: 12, fontWeight: 600,
-                cursor: saving || !keyInput.trim() ? 'not-allowed' : 'pointer',
-              }}
+              className={`flex-1 py-1.5 text-xs font-semibold rounded-lg transition-colors ${
+                saving || !keyInput.trim()
+                  ? 'bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+                  : 'bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer'
+              }`}
             >
               {saving ? 'Saving…' : 'Save & switch to PROD'}
             </button>
             <button
               onClick={() => { setShowKeyForm(false); setKeyInput(''); setSaveError('') }}
-              style={{
-                padding: '7px 12px', background: 'none',
-                border: '1px solid #2a2a4a', borderRadius: 6,
-                color: '#888', fontSize: 12, cursor: 'pointer',
-              }}
+              className="px-3 py-1.5 text-xs text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer"
             >
               Cancel
             </button>
           </div>
           {saveError && (
-            <div style={{ color: '#f44336', fontSize: 11, marginTop: 8 }}>{saveError}</div>
+            <p className="text-xs text-red-500 mt-2">{saveError}</p>
           )}
         </div>
       )}
