@@ -32,10 +32,10 @@ function formatResetDate(iso: string): string {
 }
 
 export default function DevModeToggle({ hasApiKey, onOpenAccount }: Props) {
-  const [devMode,    setDevMode]    = useState(() => localStorage.getItem('devMode') === 'true')
-  const [stats,      setStats]      = useState<ProxyStats | null>(null)
-  const [offline,    setOffline]    = useState(false)
-  const [showNoKey,  setShowNoKey]  = useState(false)
+  const [devMode,   setDevMode]   = useState(() => localStorage.getItem('devMode') === 'true')
+  const [stats,     setStats]     = useState<ProxyStats | null>(null)
+  const [offline,   setOffline]   = useState(false)
+  const [showNoKey, setShowNoKey] = useState(false)
 
   const refreshStats = useCallback(async () => {
     if (!devMode) return
@@ -51,18 +51,13 @@ export default function DevModeToggle({ hasApiKey, onOpenAccount }: Props) {
     return () => clearInterval(id)
   }, [devMode, refreshStats])
 
-  // Hide the "no key" tooltip when user switches back to DEV or gains a key
   useEffect(() => {
     if (devMode || hasApiKey) setShowNoKey(false)
   }, [devMode, hasApiKey])
 
   const toggle = async () => {
     const next = !devMode
-    // Switching to PROD requires an API key
-    if (next === false && !hasApiKey) {
-      setShowNoKey(true)
-      return
-    }
+    if (next === false && !hasApiKey) { setShowNoKey(true); return }
     setShowNoKey(false)
     localStorage.setItem('devMode', String(next))
     setDevMode(next)
@@ -71,57 +66,54 @@ export default function DevModeToggle({ hasApiKey, onOpenAccount }: Props) {
       if (data) { setStats(data); setOffline(false) }
       else       { setStats(null); setOffline(true) }
     } else {
-      setStats(null)
-      setOffline(false)
+      setStats(null); setOffline(false)
     }
   }
 
   const searches = stats ? stats.tavilySearches + stats.ddgSearches : 0
 
   let label: string
-  let title: string
-  let pillClass: string
+  let pillCls: string
 
   if (!devMode) {
-    label     = '☁ PROD'
-    title     = 'Production mode — direct Anthropic API (your key)\nClick to switch to free DEV mode'
-    pillClass = 'bg-blue-600 hover:bg-blue-700'
+    label   = '☁ PROD'
+    pillCls = 'bg-blue-600 hover:bg-blue-700 text-white'
   } else if (offline) {
-    label     = '⚠ Proxy offline'
-    title     = `DEV mode active but Cloudflare Worker is unreachable.\nCheck: https://dev-proxy.vin-bories.workers.dev/stats`
-    pillClass = 'bg-red-600 hover:bg-red-700'
+    label   = '⚠ Proxy offline'
+    pillCls = 'bg-red-500 hover:bg-red-600 text-white'
   } else if (stats) {
     const reset = formatResetDate(stats.resetDate)
-    label     = `🔧 DEV · ${searches}/${stats.limit} 🔍 · resets ${reset}`
-    title     = `DEV mode — free Groq + Tavily (Cloudflare Worker)\n${stats.tavilySearches} Tavily / ${stats.ddgSearches} DDG searches this month\n${stats.remaining} Tavily searches remaining · resets ${reset}\nClick to switch to PROD`
-    pillClass = 'bg-green-700 hover:bg-green-800'
+    label   = `🔧 DEV · ${searches}/${stats.limit} · resets ${reset}`
+    pillCls = 'bg-emerald-600 hover:bg-emerald-700 text-white'
   } else {
-    label     = '🔧 DEV'
-    title     = 'DEV mode — free Groq + Tavily (Cloudflare Worker)\nClick to switch to PROD'
-    pillClass = 'bg-green-700 hover:bg-green-800'
+    label   = '🔧 DEV'
+    pillCls = 'bg-emerald-600 hover:bg-emerald-700 text-white'
   }
 
+  const title = !devMode
+    ? 'Production mode — direct Anthropic API (your key)\nClick to switch to free DEV mode'
+    : offline
+      ? `DEV mode active but Cloudflare Worker is unreachable.\nCheck: ${PROXY_URL}/stats`
+      : stats
+        ? `DEV mode — free Groq + Tavily\n${stats.tavilySearches} Tavily / ${stats.ddgSearches} DDG searches this month\n${stats.remaining} Tavily remaining · resets ${formatResetDate(stats.resetDate)}\nClick to switch to PROD`
+        : 'DEV mode — free Groq + Tavily\nClick to switch to PROD'
+
   return (
-    <div style={{ position: 'fixed', top: 12, right: 12, zIndex: 50, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+    <div className="fixed top-3 right-3 z-50 flex flex-col items-end gap-1.5">
       <button
         onClick={toggle}
         title={title}
-        className={`px-3 py-1 rounded-full text-white text-xs font-mono font-semibold shadow-lg transition-colors ${pillClass}`}
+        className={`px-3 py-1 rounded-full text-xs font-mono font-semibold shadow-md transition-colors cursor-pointer ${pillCls}`}
       >
         {label}
       </button>
 
       {showNoKey && (
-        <div style={{
-          background: '#1a1a2e', border: '1px solid #2a2a4a', borderRadius: 8,
-          padding: '8px 12px', fontSize: 12, color: '#ccc',
-          maxWidth: 230, textAlign: 'right', lineHeight: 1.5,
-          boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
-        }}>
+        <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-600 max-w-[220px] text-right leading-relaxed shadow-lg shadow-slate-200/60">
           PROD requires an API key.{' '}
           <button
             onClick={() => { setShowNoKey(false); onOpenAccount() }}
-            style={{ background: 'none', border: 'none', color: '#6c63ff', cursor: 'pointer', fontSize: 12, padding: 0 }}
+            className="text-indigo-500 hover:text-indigo-700 cursor-pointer bg-transparent border-0 font-medium"
           >
             Add one in Settings
           </button>

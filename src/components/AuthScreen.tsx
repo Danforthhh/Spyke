@@ -54,63 +54,37 @@ export default function AuthScreen({ onLogin }: Props) {
     }
   }
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%', padding: '11px 14px', background: '#0a0a1a',
-    border: '1px solid #2a2a4a', borderRadius: 8, color: '#e0e0e0',
-    fontSize: 14, outline: 'none', fontFamily: 'inherit',
-  }
-
-  const btnStyle: React.CSSProperties = {
-    width: '100%', padding: '12px 0',
-    background: loading ? '#1e1e3a' : '#6c63ff',
-    border: 'none', borderRadius: 8,
-    color: loading ? '#888' : '#fff',
-    fontSize: 14, fontWeight: 700,
-    cursor: loading ? 'not-allowed' : 'pointer',
-    marginTop: 8, transition: 'background 0.2s',
-  }
-
   return (
-    <div style={{
-      position: 'fixed', inset: 0, background: '#0f0f23',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontFamily: 'system-ui, sans-serif',
-    }}>
-      <div style={{
-        background: '#12122a', border: '1px solid #2a2a4a', borderRadius: 16,
-        padding: '40px 36px', width: 400, maxWidth: 'calc(100vw - 40px)',
-        boxShadow: '0 0 60px rgba(108,99,255,0.15)',
-      }}>
+    <div className="fixed inset-0 bg-slate-50 flex items-center justify-center p-5">
+      <div className="bg-white border border-slate-200 rounded-2xl p-10 w-full max-w-sm shadow-lg shadow-slate-200/60">
         {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5, color: '#e0e0e0' }}>
-            SPYKE
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-slate-900 mb-3">
+            <span className="text-white text-sm font-black tracking-tighter">S</span>
           </div>
-          <div style={{ fontSize: 11, color: '#888', letterSpacing: 3, textTransform: 'uppercase', marginTop: 2 }}>
-            Competitive Intelligence
-          </div>
+          <div className="text-lg font-bold text-slate-900 tracking-tight">Spyke</div>
+          <div className="text-xs text-slate-400 uppercase tracking-widest mt-0.5">Competitive Intelligence</div>
         </div>
 
         {/* Mode tabs */}
-        <div style={{ display: 'flex', gap: 20, marginBottom: 28, borderBottom: '1px solid #1e1e3a', paddingBottom: 14 }}>
+        <div className="flex gap-4 mb-6 border-b border-slate-100 pb-4">
           {(['signin', 'register'] as Mode[]).map(m => (
             <button
               key={m}
               onClick={() => { setMode(m); setError('') }}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: 14, fontWeight: 600, padding: 0,
-                color: mode === m ? '#6c63ff' : '#555',
-                borderBottom: mode === m ? '2px solid #6c63ff' : '2px solid transparent',
-                paddingBottom: 4,
-              }}
+              className={`text-sm font-semibold pb-1 border-b-2 transition-colors cursor-pointer bg-transparent border-0 border-b-2 ${
+                mode === m
+                  ? 'text-indigo-600 border-indigo-500'
+                  : 'text-slate-400 border-transparent hover:text-slate-600'
+              }`}
+              style={{ borderBottom: mode === m ? '2px solid #6366f1' : '2px solid transparent' }}
             >
               {m === 'signin' ? 'Sign in' : 'Create account'}
             </button>
           ))}
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 14 }}>
+        <form onSubmit={handleSubmit} className="space-y-3">
           <input
             type="email"
             placeholder="Email"
@@ -118,7 +92,7 @@ export default function AuthScreen({ onLogin }: Props) {
             onChange={e => setEmail(e.target.value)}
             required
             autoComplete="email"
-            style={inputStyle}
+            className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
           />
           <input
             type="password"
@@ -127,12 +101,20 @@ export default function AuthScreen({ onLogin }: Props) {
             onChange={e => setPassword(e.target.value)}
             required
             autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-            style={inputStyle}
+            className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
           />
           {error && (
-            <div style={{ color: '#f44336', fontSize: 13 }}>{error}</div>
+            <p className="text-xs text-red-500">{error}</p>
           )}
-          <button type="submit" disabled={loading} style={btnStyle}>
+          <button
+            type="submit"
+            disabled={loading}
+            className={`w-full py-2.5 text-sm font-semibold rounded-lg transition-all mt-1 ${
+              loading
+                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-200 cursor-pointer'
+            }`}
+          >
             {loading ? '…' : mode === 'signin' ? 'Sign in' : 'Create account'}
           </button>
         </form>

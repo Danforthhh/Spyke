@@ -10,29 +10,17 @@ interface Props {
   onClose: () => void
 }
 
-const INPUT_STYLE: React.CSSProperties = {
-  width: '100%', padding: '8px 12px', background: '#0a0a1a',
-  border: '1px solid #2a2a4a', borderRadius: 6, color: '#e0e0e0',
-  fontSize: 14, outline: 'none', fontFamily: 'inherit',
-}
-
-const LABEL_STYLE: React.CSSProperties = {
-  fontSize: 11, color: '#888', letterSpacing: 1,
-  textTransform: 'uppercase', marginBottom: 4,
-}
-
 export default function ProductPicker({ products, favoriteId, onSelect, onSetFavorite, onAddProduct, onClose }: Props) {
-  const [search, setSearch] = useState('')
+  const [search,      setSearch]      = useState('')
   const [showAddForm, setShowAddForm] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [addError, setAddError] = useState('')
+  const [saving,      setSaving]      = useState(false)
+  const [addError,    setAddError]    = useState('')
 
-  // Add form state
-  const [newName, setNewName] = useState('')
-  const [newCategory, setNewCategory] = useState('')
-  const [newTagline, setNewTagline] = useState('')
+  const [newName,        setNewName]        = useState('')
+  const [newCategory,    setNewCategory]    = useState('')
+  const [newTagline,     setNewTagline]     = useState('')
   const [newPositioning, setNewPositioning] = useState('')
-  const [newFeatures, setNewFeatures] = useState('')
+  const [newFeatures,    setNewFeatures]    = useState('')
 
   const filtered = products.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -40,24 +28,23 @@ export default function ProductPicker({ products, favoriteId, onSelect, onSetFav
   )
 
   const handleAdd = async () => {
-    const name = newName.trim()
+    const name     = newName.trim()
     const category = newCategory.trim()
     const features = newFeatures.split('\n').map(f => f.trim()).filter(Boolean)
 
-    if (!name || !category) { setAddError('Name and category are required.'); return }
-    if (name.length > 100) { setAddError('Name must be 100 characters or fewer.'); return }
-    if (category.length > 100) { setAddError('Category must be 100 characters or fewer.'); return }
-    if (newTagline.trim().length > 200) { setAddError('Tagline must be 200 characters or fewer.'); return }
+    if (!name || !category)              { setAddError('Name and category are required.'); return }
+    if (name.length > 100)               { setAddError('Name must be 100 characters or fewer.'); return }
+    if (category.length > 100)           { setAddError('Category must be 100 characters or fewer.'); return }
+    if (newTagline.trim().length > 200)  { setAddError('Tagline must be 200 characters or fewer.'); return }
     if (newPositioning.trim().length > 500) { setAddError('Positioning must be 500 characters or fewer.'); return }
-    if (features.length > 50) { setAddError('Maximum 50 features.'); return }
+    if (features.length > 50)            { setAddError('Maximum 50 features.'); return }
 
     setSaving(true)
     setAddError('')
     try {
       await onAddProduct({
-        name,
-        category,
-        tagline: newTagline.trim(),
+        name, category,
+        tagline:     newTagline.trim(),
         positioning: newPositioning.trim(),
         features,
         pricing_tiers: [],
@@ -72,166 +59,115 @@ export default function ProductPicker({ products, favoriteId, onSelect, onSetFav
     }
   }
 
+  const inputCls = 'w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all'
+
   return (
     <div
+      className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-5"
       onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 100, padding: 20,
-      }}
     >
       <div
+        className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg max-h-[80vh] flex flex-col shadow-xl"
         onClick={e => e.stopPropagation()}
-        style={{
-          background: '#0d0d20', border: '1px solid #2a2a4a', borderRadius: 12,
-          width: '100%', maxWidth: 560, maxHeight: '80vh',
-          display: 'flex', flexDirection: 'column',
-        }}
       >
         {/* Header */}
-        <div style={{
-          display: 'flex', alignItems: 'center', padding: '16px 20px',
-          borderBottom: '1px solid #1e1e3a',
-        }}>
-          <span style={{ fontSize: 13, letterSpacing: 2, textTransform: 'uppercase', color: '#888', fontFamily: 'monospace' }}>
-            YOUR PRODUCT
-          </span>
-          <button
-            onClick={onClose}
-            style={{
-              marginLeft: 'auto', background: 'none', border: 'none',
-              color: '#555', fontSize: 20, cursor: 'pointer', lineHeight: 1,
-            }}
-          >
-            ×
-          </button>
+        <div className="flex items-center px-5 py-3.5 border-b border-slate-100">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Your product</span>
+          <button onClick={onClose} className="ml-auto text-slate-400 hover:text-slate-600 text-lg leading-none cursor-pointer bg-transparent border-0 w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors">×</button>
         </div>
 
         {/* Search */}
-        <div style={{ padding: '12px 20px', borderBottom: '1px solid #1e1e3a' }}>
+        <div className="px-4 py-3 border-b border-slate-100">
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search products..."
+            placeholder="Search products…"
             autoFocus
-            style={{ ...INPUT_STYLE, fontSize: 13 }}
+            className={inputCls}
           />
         </div>
 
         {/* List */}
-        <div style={{ overflowY: 'auto', flex: 1 }}>
+        <div className="overflow-y-auto flex-1">
           {filtered.length === 0 && (
-            <div style={{ padding: 24, textAlign: 'center', color: '#555', fontSize: 13 }}>
-              No products found.
-            </div>
+            <div className="py-10 text-center text-sm text-slate-400">No products found.</div>
           )}
-          {filtered.map(p => (
-            <div
-              key={p.id}
-              onClick={() => { onSelect(p); onClose() }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                padding: '12px 20px', cursor: 'pointer', borderBottom: '1px solid #1a1a30',
-                transition: 'background 0.1s',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = '#13132a')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-            >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, color: '#e0e0e0', fontWeight: 500 }}>{p.name}</div>
-                <div style={{ fontSize: 11, color: '#555', marginTop: 2 }}>{p.category}</div>
-              </div>
-              {/* Favorite star */}
-              <button
-                onClick={e => {
-                  e.stopPropagation()
-                  onSetFavorite(favoriteId === p.id ? null : p.id)
-                }}
-                title={favoriteId === p.id ? 'Remove from favorites' : 'Set as default'}
-                style={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  fontSize: 16, padding: '2px 4px', lineHeight: 1,
-                  color: favoriteId === p.id ? '#f5c518' : '#333',
-                  transition: 'color 0.15s',
-                }}
+          {filtered.map(p => {
+            const initials = p.name.slice(0, 2).toUpperCase()
+            const isFav = favoriteId === p.id
+            return (
+              <div
+                key={p.id}
+                onClick={() => { onSelect(p); onClose() }}
+                className="flex items-center gap-3 px-5 py-3 border-b border-slate-50 cursor-pointer hover:bg-slate-50 transition-colors"
               >
-                {favoriteId === p.id ? '★' : '☆'}
-              </button>
-            </div>
-          ))}
+                <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[11px] font-bold text-indigo-500 flex-shrink-0">
+                  {initials}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-slate-800 truncate">{p.name}</div>
+                  <div className="text-[11px] text-slate-400 truncate">{p.category}</div>
+                </div>
+                <button
+                  onClick={e => { e.stopPropagation(); onSetFavorite(isFav ? null : p.id) }}
+                  title={isFav ? 'Remove from favorites' : 'Set as default'}
+                  className={`text-base p-1 rounded-md transition-colors cursor-pointer bg-transparent border-0 ${
+                    isFav ? 'text-amber-400 hover:text-amber-500' : 'text-slate-200 hover:text-slate-400'
+                  }`}
+                >
+                  {isFav ? '★' : '☆'}
+                </button>
+              </div>
+            )
+          })}
         </div>
 
-        {/* Add product section */}
-        <div style={{ borderTop: '1px solid #1e1e3a' }}>
+        {/* Add product */}
+        <div className="border-t border-slate-100">
           {!showAddForm ? (
             <button
               onClick={() => setShowAddForm(true)}
-              style={{
-                width: '100%', padding: '12px 20px', background: 'none', border: 'none',
-                color: '#6c63ff', fontSize: 13, cursor: 'pointer', textAlign: 'left',
-                fontFamily: 'monospace', letterSpacing: 0.5,
-              }}
+              className="w-full px-5 py-3 text-left text-sm text-indigo-500 hover:bg-indigo-50 transition-colors cursor-pointer bg-transparent border-0 flex items-center gap-1.5 font-medium"
             >
-              + Add a product
+              <span className="text-base leading-none">+</span> Add a product
             </button>
           ) : (
-            <div style={{ padding: '16px 20px', display: 'grid', gap: 12 }}>
-              <div style={{ fontSize: 12, color: '#888', letterSpacing: 1, textTransform: 'uppercase' }}>
-                New product
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="px-5 py-4 space-y-3">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">New product</p>
+              <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <div style={LABEL_STYLE}>Name *</div>
-                  <input value={newName} onChange={e => setNewName(e.target.value)} style={INPUT_STYLE} placeholder="ProTop" />
+                  <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Name *</div>
+                  <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="ProTop" className={inputCls} />
                 </div>
                 <div>
-                  <div style={LABEL_STYLE}>Category *</div>
-                  <input value={newCategory} onChange={e => setNewCategory(e.target.value)} style={INPUT_STYLE} placeholder="B2B SaaS CRM" />
+                  <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Category *</div>
+                  <input value={newCategory} onChange={e => setNewCategory(e.target.value)} placeholder="B2B SaaS CRM" className={inputCls} />
                 </div>
               </div>
               <div>
-                <div style={LABEL_STYLE}>Tagline</div>
-                <input value={newTagline} onChange={e => setNewTagline(e.target.value)} style={INPUT_STYLE} placeholder="One-liner" />
+                <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Tagline</div>
+                <input value={newTagline} onChange={e => setNewTagline(e.target.value)} placeholder="One-liner…" className={inputCls} />
               </div>
               <div>
-                <div style={LABEL_STYLE}>Positioning (1–2 sentences)</div>
-                <textarea
-                  value={newPositioning} onChange={e => setNewPositioning(e.target.value)}
-                  rows={2} style={{ ...INPUT_STYLE, resize: 'vertical' }}
-                  placeholder="What makes this product unique..."
-                />
+                <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Positioning</div>
+                <textarea value={newPositioning} onChange={e => setNewPositioning(e.target.value)} rows={2} placeholder="What makes this product unique…" className={`${inputCls} resize-none`} />
               </div>
               <div>
-                <div style={LABEL_STYLE}>Features (one per line)</div>
-                <textarea
-                  value={newFeatures} onChange={e => setNewFeatures(e.target.value)}
-                  rows={3} style={{ ...INPUT_STYLE, resize: 'vertical', fontFamily: 'monospace', fontSize: 12 }}
-                  placeholder={'Feature 1\nFeature 2\nFeature 3'}
-                />
+                <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Features (one per line)</div>
+                <textarea value={newFeatures} onChange={e => setNewFeatures(e.target.value)} rows={3} placeholder={'Feature 1\nFeature 2'} className={`${inputCls} resize-none font-mono text-xs`} />
               </div>
-              {addError && <div style={{ fontSize: 12, color: '#e05555' }}>{addError}</div>}
-              <div style={{ display: 'flex', gap: 8 }}>
+              {addError && <p className="text-xs text-red-500">{addError}</p>}
+              <div className="flex gap-2 pb-1">
                 <button
                   onClick={handleAdd}
                   disabled={saving}
-                  style={{
-                    padding: '8px 20px', background: saving ? '#1e1e3a' : '#6c63ff',
-                    border: 'none', borderRadius: 6, color: saving ? '#555' : '#fff',
-                    fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer',
-                  }}
+                  className={`text-sm font-semibold px-4 py-2 rounded-lg transition-colors ${
+                    saving ? 'bg-slate-100 text-slate-400 cursor-not-allowed' : 'bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer'
+                  }`}
                 >
                   {saving ? 'Saving…' : 'Add to shared list'}
                 </button>
-                <button
-                  onClick={() => { setShowAddForm(false); setAddError('') }}
-                  style={{
-                    padding: '8px 16px', background: 'none', border: '1px solid #2a2a4a',
-                    borderRadius: 6, color: '#888', fontSize: 13, cursor: 'pointer',
-                  }}
-                >
-                  Cancel
-                </button>
+                <button onClick={() => { setShowAddForm(false); setAddError('') }} className="text-sm px-4 py-2 rounded-lg border border-slate-200 text-slate-500 hover:border-slate-300 cursor-pointer">Cancel</button>
               </div>
             </div>
           )}

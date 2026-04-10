@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { signOut, reauthenticateWithCredential, EmailAuthProvider, deleteUser } from 'firebase/auth'
-import { deleteDoc, doc } from 'firebase/firestore'
-import { auth, db } from '../services/firebase'
+import { auth } from '../services/firebase'
 import { encryptApiKey, clearPersistedPassword } from '../services/cryptoService'
 import { saveEncryptedKey, removeEncryptedKey } from '../services/firestoreService'
 import type { Session } from '../types'
@@ -15,45 +14,36 @@ interface Props {
   onClose: () => void
 }
 
-export default function AccountModal({
-  session, sessionPassword, hasKey, onKeyUpdated, onLogout, onClose,
-}: Props) {
+export default function AccountModal({ session, sessionPassword, hasKey, onKeyUpdated, onLogout, onClose }: Props) {
   const [editing,       setEditing]       = useState(false)
-  const [keyInput,      setKeyInput]      = useState('')
-  const [saving,        setSaving]        = useState(false)
-  const [error,         setError]         = useState('')
+  const [newKey,        setNewKey]        = useState('')
+  const [keyError,      setKeyError]      = useState('')
+  const [savingKey,     setSavingKey]     = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting,      setDeleting]      = useState(false)
+  const [deleteError,   setDeleteError]   = useState('')
 
   const handleSaveKey = async () => {
-    const trimmed = keyInput.trim()
+    const trimmed = newKey.trim()
     if (!trimmed) return
-    setSaving(true)
-    setError('')
+    setSavingKey(true)
+    setKeyError('')
     try {
       const bundle = await encryptApiKey(trimmed, sessionPassword)
       await saveEncryptedKey(session.uid, bundle)
       onKeyUpdated(trimmed)
       setEditing(false)
-      setKeyInput('')
+      setNewKey('')
     } catch {
-      setError('Failed to save key. Please try again.')
+      setKeyError('Failed to save key. Please try again.')
     } finally {
-      setSaving(false)
+      setSavingKey(false)
     }
   }
 
   const handleRemoveKey = async () => {
-    setSaving(true)
-    setError('')
-    try {
-      await removeEncryptedKey(session.uid)
-      onKeyUpdated(null)
-    } catch {
-      setError('Failed to remove key. Please try again.')
-    } finally {
-      setSaving(false)
-    }
+    await removeEncryptedKey(session.uid)
+    onKeyUpdated(null)
   }
 
   const handleLogout = async () => {
@@ -63,216 +53,134 @@ export default function AccountModal({
   }
 
   const handleDeleteAccount = async () => {
-    const currentUser = auth.currentUser
-    if (!currentUser) return
     setDeleting(true)
-    setError('')
+    setDeleteError('')
     try {
-      // Re-authenticate before deletion (Firebase requires this for sensitive operations)
+      const currentUser = auth.currentUser
+      if (!currentUser) throw new Error('No user')
       const credential = EmailAuthProvider.credential(session.email, sessionPassword)
       await reauthenticateWithCredential(currentUser, credential)
-      // Delete Firestore data first, then the auth account
-      await deleteDoc(doc(db, 'users', session.uid, 'settings', 'apiKey'))
+      await removeEncryptedKey(session.uid)
       await deleteUser(currentUser)
       clearPersistedPassword()
       onLogout()
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? ''
       if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
-        setError('Re-authentication failed. Please sign out and sign back in before deleting.')
+        setDeleteError('Re-authentication failed. Please sign out and sign back in before deleting.')
       } else {
-        setError('Failed to delete account. Please try again.')
+        setDeleteError('Failed to delete account. Please try again.')
       }
-      setConfirmDelete(false)
     } finally {
       setDeleting(false)
     }
   }
 
-  const inputStyle: React.CSSProperties = {
-    flex: 1, padding: '9px 12px', background: '#0a0a1a',
-    border: '1px solid #2a2a4a', borderRadius: 8, color: '#e0e0e0',
-    fontSize: 13, outline: 'none', fontFamily: 'monospace',
-  }
-
-  const smBtnStyle = (color = '#6c63ff'): React.CSSProperties => ({
-    padding: '7px 14px', background: 'none',
-    border: `1px solid ${color}`, borderRadius: 8,
-    color, fontSize: 12, cursor: saving ? 'not-allowed' : 'pointer',
-    whiteSpace: 'nowrap' as const,
-  })
-
   return (
     <div
-      style={{
-        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 100, fontFamily: 'system-ui, sans-serif',
-      }}
-      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+      className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-5"
+      onClick={onClose}
     >
-      <div style={{
-        background: '#12122a', border: '1px solid #2a2a4a', borderRadius: 16,
-        padding: '32px 28px', width: 420, maxWidth: 'calc(100vw - 40px)',
-        boxShadow: '0 0 60px rgba(108,99,255,0.15)',
-      }}>
+      <div
+        className="bg-white border border-slate-200 rounded-2xl w-full max-w-sm shadow-xl"
+        onClick={e => e.stopPropagation()}
+      >
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
-          <div style={{ fontSize: 11, color: '#6c63ff', letterSpacing: 3, textTransform: 'uppercase', fontWeight: 600 }}>
-            Account
-          </div>
-          <button
-            onClick={onClose}
-            style={{ background: 'none', border: 'none', color: '#555', fontSize: 20, cursor: 'pointer', lineHeight: 1 }}
-          >
-            ×
-          </button>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">Account</span>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg leading-none cursor-pointer bg-transparent border-0 p-1">×</button>
         </div>
 
-        {/* Email */}
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: 11, color: '#888', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>
-            Email
-          </div>
-          <div style={{ fontSize: 14, color: '#e0e0e0', fontFamily: 'monospace' }}>
-            {session.email}
-          </div>
-        </div>
-
-        <div style={{ borderTop: '1px solid #1e1e3a', paddingTop: 24, marginBottom: 24 }}>
-          <div style={{ fontSize: 11, color: '#888', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>
-            Anthropic API Key
+        <div className="px-6 py-5 space-y-5">
+          {/* Email */}
+          <div>
+            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Email</div>
+            <div className="text-sm text-slate-700 font-mono">{session.email}</div>
           </div>
 
-          {!editing ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              {hasKey ? (
-                <>
-                  <span style={{ fontSize: 13, color: '#e0e0e0', fontFamily: 'monospace' }}>
-                    sk-ant-••••••••••
-                  </span>
-                  <button onClick={() => { setEditing(true); setKeyInput('') }} style={smBtnStyle()}>
-                    Edit
-                  </button>
-                  <button onClick={handleRemoveKey} disabled={saving} style={smBtnStyle('#f44336')}>
-                    Remove
-                  </button>
-                </>
-              ) : (
-                <>
-                  <span style={{ fontSize: 13, color: '#555' }}>
-                    No key — PROD mode unavailable
-                  </span>
-                  <button onClick={() => { setEditing(true); setKeyInput('') }} style={smBtnStyle()}>
-                    Add key
-                  </button>
-                </>
-              )}
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gap: 10 }}>
-              <div style={{ display: 'flex', gap: 8 }}>
+          {/* API Key */}
+          <div className="border-t border-slate-100 pt-5">
+            <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Anthropic API Key</div>
+            {!editing ? (
+              <div>
+                {hasKey ? (
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-slate-700 font-mono">sk-ant-••••••••••</span>
+                    <button onClick={() => setEditing(true)} className="text-xs text-indigo-500 hover:text-indigo-700 cursor-pointer bg-transparent border-0 font-medium">Edit</button>
+                    <button onClick={handleRemoveKey} className="text-xs text-red-400 hover:text-red-600 cursor-pointer bg-transparent border-0 font-medium">Remove</button>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <p className="text-xs text-slate-400">No key — PROD mode unavailable.</p>
+                    <button onClick={() => setEditing(true)} className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 cursor-pointer bg-transparent border-0">+ Add API key</button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
                 <input
                   type="password"
                   placeholder="sk-ant-..."
-                  value={keyInput}
-                  onChange={e => setKeyInput(e.target.value)}
+                  value={newKey}
+                  onChange={e => setNewKey(e.target.value)}
                   autoFocus
-                  style={inputStyle}
+                  className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all font-mono"
                 />
+                {keyError && <p className="text-xs text-red-500">{keyError}</p>}
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSaveKey}
+                    disabled={savingKey || !newKey.trim()}
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
+                      savingKey || !newKey.trim()
+                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                        : 'bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer'
+                    }`}
+                  >
+                    {savingKey ? 'Saving…' : 'Save'}
+                  </button>
+                  <button onClick={() => { setEditing(false); setNewKey(''); setKeyError('') }} className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:border-slate-300 cursor-pointer">Cancel</button>
+                </div>
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  onClick={handleSaveKey}
-                  disabled={saving || !keyInput.trim()}
-                  style={{
-                    ...smBtnStyle(),
-                    background: saving || !keyInput.trim() ? 'transparent' : '#6c63ff',
-                    color: saving || !keyInput.trim() ? '#555' : '#fff',
-                    border: '1px solid #6c63ff',
-                  }}
-                >
-                  {saving ? 'Saving…' : 'Save'}
-                </button>
-                <button onClick={() => { setEditing(false); setKeyInput(''); setError('') }} style={smBtnStyle('#888')}>
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
-
-          {error && (
-            <div style={{ color: '#f44336', fontSize: 12, marginTop: 8 }}>{error}</div>
-          )}
-        </div>
-
-        {/* Logout */}
-        <button
-          onClick={handleLogout}
-          style={{
-            width: '100%', padding: '11px 0',
-            background: 'none', border: '1px solid #2a2a4a',
-            borderRadius: 8, color: '#888', fontSize: 13,
-            cursor: 'pointer', marginBottom: 12,
-          }}
-        >
-          Sign out
-        </button>
-
-        {/* Delete account */}
-        {!confirmDelete ? (
-          <button
-            onClick={() => { setConfirmDelete(true); setError('') }}
-            style={{
-              width: '100%', padding: '11px 0',
-              background: 'none', border: '1px solid #3a1a1a',
-              borderRadius: 8, color: '#7a3a3a', fontSize: 13,
-              cursor: 'pointer',
-            }}
-          >
-            Delete account
-          </button>
-        ) : (
-          <div style={{
-            padding: '16px', border: '1px solid #5a2a2a',
-            borderRadius: 8, background: '#1a0a0a',
-          }}>
-            <div style={{ fontSize: 13, color: '#f44336', marginBottom: 12, lineHeight: 1.5 }}>
-              This permanently deletes your account and API key. This cannot be undone.
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={handleDeleteAccount}
-                disabled={deleting}
-                style={{
-                  flex: 1, padding: '9px 0',
-                  background: deleting ? '#2a0a0a' : '#c0392b',
-                  border: 'none', borderRadius: 8,
-                  color: deleting ? '#666' : '#fff',
-                  fontSize: 13, fontWeight: 600,
-                  cursor: deleting ? 'not-allowed' : 'pointer',
-                }}
-              >
-                {deleting ? 'Deleting…' : 'Confirm delete'}
-              </button>
-              <button
-                onClick={() => { setConfirmDelete(false); setError('') }}
-                disabled={deleting}
-                style={{
-                  flex: 1, padding: '9px 0',
-                  background: 'none', border: '1px solid #2a2a4a',
-                  borderRadius: 8, color: '#888', fontSize: 13,
-                  cursor: deleting ? 'not-allowed' : 'pointer',
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-            {error && (
-              <div style={{ color: '#f44336', fontSize: 12, marginTop: 8 }}>{error}</div>
             )}
           </div>
-        )}
+
+          {/* Logout */}
+          <div className="border-t border-slate-100 pt-4">
+            <button
+              onClick={handleLogout}
+              className="w-full py-2 text-sm font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+            >
+              Sign out
+            </button>
+          </div>
+
+          {/* Delete account */}
+          <div className="border-t border-slate-100 pt-3 pb-1">
+            {!confirmDelete ? (
+              <button onClick={() => setConfirmDelete(true)} className="text-xs text-red-400 hover:text-red-600 cursor-pointer bg-transparent border-0 font-medium">
+                Delete account
+              </button>
+            ) : (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 space-y-3">
+                <p className="text-xs text-red-600 font-medium">This permanently deletes your account and API key. This cannot be undone.</p>
+                {deleteError && <p className="text-xs text-red-500">{deleteError}</p>}
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleDeleteAccount}
+                    disabled={deleting}
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
+                      deleting ? 'bg-red-100 text-red-300 cursor-not-allowed' : 'bg-red-500 text-white hover:bg-red-600 cursor-pointer'
+                    }`}
+                  >
+                    {deleting ? 'Deleting…' : 'Confirm delete'}
+                  </button>
+                  <button onClick={() => { setConfirmDelete(false); setDeleteError('') }} className="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:border-slate-300 cursor-pointer">Cancel</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )

@@ -3,12 +3,15 @@ import { useState, useEffect } from 'react'
 interface Props {
   html: string
   streaming: boolean
-  reportDate?: number  // Unix ms — set for loaded past reports
+  reportDate?: number
   onDeepAnalysis?: () => void
   deepLoading?: boolean
+  /** When true, the panel renders the spinner (spokes still running, no html yet) */
+  analyzing?: boolean
+  competitorName?: string
 }
 
-export default function ReportPanel({ html, streaming, reportDate, onDeepAnalysis, deepLoading }: Props) {
+export default function ReportPanel({ html, streaming, reportDate, onDeepAnalysis, deepLoading, analyzing, competitorName }: Props) {
   const isComplete = !streaming && html.includes('</html>')
 
   // Debounce iframe updates while streaming — prevents O(n²) DOM reflows
@@ -19,41 +22,79 @@ export default function ReportPanel({ html, streaming, reportDate, onDeepAnalysi
     return () => clearTimeout(t)
   }, [html, streaming])
 
+  const title = competitorName
+    ? `${competitorName} · competitive report`
+    : 'Competitive report'
+
   return (
-    <div style={{ marginTop: 32 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
-        <h2 style={{ margin: 0, color: '#e0e0e0', fontSize: 19 }}>
-          Report{reportDate && !streaming
-            ? <span style={{ color: '#555', fontSize: 13, fontWeight: 400, marginLeft: 10 }}>
-                {new Date(reportDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-              </span>
-            : null}
-          {streaming && <span style={{ color: '#6c63ff', fontSize: 14 }}> — generating...</span>}
-        </h2>
+    <div className="flex flex-col h-full min-h-0">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-3 flex-shrink-0">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-800">{title}</h2>
+          {reportDate && !streaming && (
+            <p className="text-xs text-slate-400 mt-0.5">
+              {new Date(reportDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+            </p>
+          )}
+          {streaming && (
+            <p className="text-xs text-indigo-500 mt-0.5">Generating…</p>
+          )}
+        </div>
         {isComplete && onDeepAnalysis && (
           <button
             onClick={onDeepAnalysis}
             disabled={deepLoading}
-            style={{
-              marginLeft: 'auto', padding: '8px 18px',
-              background: deepLoading ? '#2a2a4a' : 'transparent',
-              border: '1px solid #6c63ff', borderRadius: 6, color: deepLoading ? '#666' : '#6c63ff',
-              fontSize: 13, cursor: deepLoading ? 'not-allowed' : 'pointer', fontWeight: 600,
-            }}
+            className={`ml-auto text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
+              deepLoading
+                ? 'border-slate-200 text-slate-400 cursor-not-allowed bg-slate-50'
+                : 'border-indigo-300 text-indigo-600 hover:bg-indigo-50 cursor-pointer'
+            }`}
           >
-            {deepLoading ? 'Generating with Opus 4.6...' : '✦ Deep analysis with Opus 4.6'}
+            {deepLoading ? 'Generating with Opus 4.6…' : '✦ Deep analysis (Opus 4.6)'}
           </button>
         )}
       </div>
 
-      {/* HTML rendered in sandboxed iframe — uses debounced displayHtml to avoid streaming thrash */}
+      {/* Spinner — shown while spokes are running and no report yet */}
+      {analyzing && !html && (
+        <div className="flex-1 flex flex-col items-center justify-center gap-5 bg-white rounded-xl border border-slate-200 shadow-sm min-h-[420px]">
+          {/* Ring spinner */}
+          <div className="relative w-12 h-12">
+            <div className="absolute inset-0 rounded-full border-2 border-slate-200" />
+            <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-indigo-500 border-r-indigo-300 animate-spin-smooth" />
+          </div>
+          <div className="text-center space-y-1">
+            <p className="text-sm font-medium text-slate-600">Generating report…</p>
+            <p className="text-xs text-slate-400">Waiting for research spokes</p>
+          </div>
+          {/* Skeleton lines */}
+          <div className="w-full max-w-xs space-y-2 px-4">
+            <div className="h-2 rounded-full animate-shimmer" style={{ width: '72%' }} />
+            <div className="h-2 rounded-full animate-shimmer" style={{ width: '90%', animationDelay: '.1s' }} />
+            <div className="h-2 rounded-full animate-shimmer" style={{ width: '58%', animationDelay: '.2s' }} />
+            <div className="h-2 rounded-full animate-shimmer" style={{ width: '80%', animationDelay: '.3s' }} />
+            <div className="h-2 rounded-full animate-shimmer" style={{ width: '65%', animationDelay: '.4s' }} />
+          </div>
+        </div>
+      )}
+
+      {/* Streaming spinner — report is being written */}
+      {streaming && !displayHtml && (
+        <div className="flex-1 flex flex-col items-center justify-center gap-5 bg-white rounded-xl border border-indigo-100 shadow-sm min-h-[420px]">
+          <div className="relative w-12 h-12">
+            <div className="absolute inset-0 rounded-full border-2 border-indigo-100" />
+            <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-indigo-500 animate-spin-smooth" />
+          </div>
+          <p className="text-sm font-medium text-slate-600">Writing report…</p>
+        </div>
+      )}
+
+      {/* Report iframe */}
       {displayHtml && (
         <iframe
           srcDoc={displayHtml}
-          style={{
-            width: '100%', height: 700, border: '1px solid #1e1e3a',
-            borderRadius: 8, background: '#fff',
-          }}
+          className="flex-1 w-full min-h-[420px] border border-slate-200 rounded-xl bg-white shadow-sm"
           title="Competitive report"
           sandbox="allow-scripts"
         />
@@ -61,7 +102,7 @@ export default function ReportPanel({ html, streaming, reportDate, onDeepAnalysi
 
       {/* Download buttons */}
       {isComplete && (
-        <div style={{ marginTop: 12, display: 'flex', gap: 12 }}>
+        <div className="flex gap-2 mt-2 flex-shrink-0">
           <button
             onClick={() => {
               const blob = new Blob([html], { type: 'text/html' })
@@ -70,26 +111,19 @@ export default function ReportPanel({ html, streaming, reportDate, onDeepAnalysi
               a.download = 'competitive-report.html'
               a.click()
             }}
-            style={{
-              padding: '8px 18px', background: '#1e1e3a', border: '1px solid #2a2a4a',
-              borderRadius: 6, color: '#bbb', fontSize: 13, cursor: 'pointer',
-            }}
+            className="text-xs px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-500 hover:border-slate-300 hover:text-slate-700 transition-colors cursor-pointer"
           >
             Download HTML
           </button>
           <button
             onClick={() => {
-              // Open in a new tab and trigger the browser's print-to-PDF dialog
               const win = window.open('', '_blank')
               if (!win) return
               win.document.write(html)
               win.document.close()
               win.addEventListener('load', () => { win.focus(); win.print() })
             }}
-            style={{
-              padding: '8px 18px', background: '#1e1e3a', border: '1px solid #2a2a4a',
-              borderRadius: 6, color: '#bbb', fontSize: 13, cursor: 'pointer',
-            }}
+            className="text-xs px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-500 hover:border-slate-300 hover:text-slate-700 transition-colors cursor-pointer"
           >
             Export PDF
           </button>

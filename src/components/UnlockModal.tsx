@@ -23,7 +23,6 @@ export default function UnlockModal({ uid, email, onUnlocked }: Props) {
     try {
       const settings = await getUserSettings(uid)
       if (!settings?.encryptedKey) {
-        // User has no key stored — unlock without decryption
         persistPassword(password)
         onUnlocked(null, password)
         return
@@ -48,32 +47,18 @@ export default function UnlockModal({ uid, email, onUnlocked }: Props) {
   }
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, background: '#0f0f23',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontFamily: 'system-ui, sans-serif',
-    }}>
-      <div style={{
-        background: '#12122a', border: '1px solid #2a2a4a', borderRadius: 16,
-        padding: '40px 36px', width: 400, maxWidth: 'calc(100vw - 40px)',
-        boxShadow: '0 0 60px rgba(108,99,255,0.15)',
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={{ fontSize: 22, fontWeight: 700, letterSpacing: -0.5, color: '#e0e0e0' }}>
-            SPYKE
+    <div className="fixed inset-0 bg-slate-50 flex items-center justify-center p-5">
+      <div className="bg-white border border-slate-200 rounded-2xl p-10 w-full max-w-sm shadow-lg shadow-slate-200/60">
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-slate-900 mb-3">
+            <span className="text-white text-sm font-black tracking-tighter">S</span>
           </div>
-          <div style={{ fontSize: 11, color: '#888', letterSpacing: 3, textTransform: 'uppercase', marginTop: 2 }}>
-            Unlock session
-          </div>
+          <div className="text-lg font-bold text-slate-900 tracking-tight">Spyke</div>
+          <div className="text-xs text-slate-400 mt-1">Re-enter your password to decrypt your API key.</div>
+          <div className="text-xs text-slate-400 mt-0.5">{email}</div>
         </div>
 
-        <div style={{ fontSize: 13, color: '#888', marginBottom: 20, textAlign: 'center' }}>
-          Re-enter your password to decrypt your API key.
-          <br />
-          <span style={{ color: '#555', fontSize: 12 }}>{email}</span>
-        </div>
-
-        <form onSubmit={handleUnlock} style={{ display: 'grid', gap: 14 }}>
+        <form onSubmit={handleUnlock} className="space-y-3">
           <input
             type="password"
             placeholder="Password"
@@ -82,27 +67,17 @@ export default function UnlockModal({ uid, email, onUnlocked }: Props) {
             required
             autoFocus
             autoComplete="current-password"
-            style={{
-              width: '100%', padding: '11px 14px', background: '#0a0a1a',
-              border: '1px solid #2a2a4a', borderRadius: 8, color: '#e0e0e0',
-              fontSize: 14, outline: 'none', fontFamily: 'inherit',
-            }}
+            className="w-full px-3.5 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
           />
-          {error && (
-            <div style={{ color: '#f44336', fontSize: 13 }}>{error}</div>
-          )}
+          {error && <p className="text-xs text-red-500">{error}</p>}
           <button
             type="submit"
             disabled={loading}
-            style={{
-              width: '100%', padding: '12px 0',
-              background: loading ? '#1e1e3a' : '#6c63ff',
-              border: 'none', borderRadius: 8,
-              color: loading ? '#888' : '#fff',
-              fontSize: 14, fontWeight: 700,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              transition: 'background 0.2s',
-            }}
+            className={`w-full py-2.5 text-sm font-semibold rounded-lg transition-all ${
+              loading
+                ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-200 cursor-pointer'
+            }`}
           >
             {loading ? '…' : 'Unlock'}
           </button>
@@ -110,11 +85,7 @@ export default function UnlockModal({ uid, email, onUnlocked }: Props) {
 
         <button
           onClick={handleSignOut}
-          style={{
-            marginTop: 16, width: '100%', padding: '10px 0',
-            background: 'none', border: '1px solid #1e1e3a',
-            borderRadius: 8, color: '#555', fontSize: 13, cursor: 'pointer',
-          }}
+          className="mt-3 w-full py-2.5 text-sm text-slate-400 bg-transparent border border-slate-200 rounded-lg hover:text-slate-600 hover:border-slate-300 transition-colors cursor-pointer"
         >
           Sign in as a different user
         </button>

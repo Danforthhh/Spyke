@@ -34,26 +34,26 @@ export default function App() {
   const [showAccount,     setShowAccount]     = useState(false)
 
   // ── App state ────────────────────────────────────────────────────────────
-  const [competitor,       setCompetitor]       = useState('')
-  const [focus,            setFocus]            = useState('')
-  const [spokes,           setSpokes]           = useState<SpokesState>(INITIAL_SPOKES)
-  const [reportHtml,       setReportHtml]       = useState('')
-  const [streaming,        setStreaming]        = useState(false)
-  const [deepLoading,      setDeepLoading]      = useState(false)
-  const [running,          setRunning]          = useState(false)
-  const [myProduct,        setMyProduct]        = useState<MyProduct>(DEFAULT_MY_PRODUCT)
-  const [sharedProducts,   setSharedProducts]   = useState<SharedProduct[]>([])
+  const [competitor,        setCompetitor]        = useState('')
+  const [focus,             setFocus]             = useState('')
+  const [spokes,            setSpokes]            = useState<SpokesState>(INITIAL_SPOKES)
+  const [reportHtml,        setReportHtml]        = useState('')
+  const [streaming,         setStreaming]         = useState(false)
+  const [deepLoading,       setDeepLoading]       = useState(false)
+  const [running,           setRunning]           = useState(false)
+  const [myProduct,         setMyProduct]         = useState<MyProduct>(DEFAULT_MY_PRODUCT)
+  const [sharedProducts,    setSharedProducts]    = useState<SharedProduct[]>([])
   const [favoriteProductId, setFavoriteProductId] = useState<string | null>(null)
   const [showProductPicker, setShowProductPicker] = useState(false)
-  const [devMode,          setDevMode]          = useState(() => localStorage.getItem('devMode') === 'true')
-  const [lastResults,      setLastResults]      = useState<{
+  const [devMode,           setDevMode]           = useState(() => localStorage.getItem('devMode') === 'true')
+  const [lastResults,       setLastResults]       = useState<{
     scraper: ScraperData | null
     sentiment: SentimentData | null
     positioning: PositioningData | null
   } | null>(null)
-  const [savedReports,     setSavedReports]     = useState<SavedReport[]>([])
-  const [showHistory,      setShowHistory]      = useState(false)
-  const [reportDate,       setReportDate]       = useState<number | undefined>(undefined)
+  const [savedReports,      setSavedReports]      = useState<SavedReport[]>([])
+  const [showHistory,       setShowHistory]       = useState(false)
+  const [reportDate,        setReportDate]        = useState<number | undefined>(undefined)
 
   // Stay in sync when DevModeToggle writes to localStorage
   useEffect(() => {
@@ -80,7 +80,6 @@ export default function App() {
 
     const pw = getPersistedPassword()
     if (pw) {
-      // Attempt auto-decrypt with persisted password
       setSessionPassword(pw)
       getUserSettings(user.uid).then(async settings => {
         if (settings?.encryptedKey) {
@@ -89,21 +88,17 @@ export default function App() {
         }
       })
     } else {
-      // Check if user has a key; if so, prompt for password
       getUserSettings(user.uid).then(settings => {
         if (settings?.encryptedKey) setShowUnlock(true)
       })
     }
 
-    // Load saved report history
     listReports(user.uid).then(setSavedReports).catch(err => console.warn('Failed to load reports:', err))
 
-    // Load shared product database + user favorite
     Promise.all([
       listSharedProducts(),
       getFavoriteProductId(user.uid),
     ]).then(async ([products, favId]) => {
-      // Seed if the shared list is empty
       if (products.length === 0) {
         await seedSharedProducts(user.uid)
         const seeded = await listSharedProducts()
@@ -125,7 +120,6 @@ export default function App() {
 
   const handleLogin = (password: string) => {
     setSessionPassword(password)
-    // apiKey will be set by the useEffect above after Firebase auth state updates
   }
 
   const handleUnlocked = (decryptedKey: string | null, password: string) => {
@@ -232,7 +226,6 @@ export default function App() {
       updateSpoke('scraper', { status: 'running' })
       updateSpoke('sentiment', { status: 'running' })
       updateSpoke('positioning', { status: 'running' })
-      // Each spoke updates its own status immediately when it settles (not after all three)
       const scraperP = settle(withTimeout(runScraper(competitor, msg => addLog('scraper', msg), key, focusSnapshot), TIMEOUT, 'Scraper'))
         .then(r => { updateSpoke('scraper', { status: r.status === 'fulfilled' ? 'done' : 'error' }); if (r.status === 'rejected') addLog('scraper', `Error: ${errMsg(r.reason)}`); return r })
       const sentimentP = settle(withTimeout(runSentiment(competitor, msg => addLog('sentiment', msg), key, focusSnapshot), TIMEOUT, 'Sentiment'))
@@ -242,8 +235,8 @@ export default function App() {
       [scraperResult, sentimentResult, positioningResult] = await Promise.all([scraperP, sentimentP, positioningP])
     }
 
-    const scraper    = scraperResult.status    === 'fulfilled' ? scraperResult.value    : null
-    const sentiment  = sentimentResult.status  === 'fulfilled' ? sentimentResult.value  : null
+    const scraper     = scraperResult.status     === 'fulfilled' ? scraperResult.value     : null
+    const sentiment   = sentimentResult.status   === 'fulfilled' ? sentimentResult.value   : null
     const positioning = positioningResult.status === 'fulfilled' ? positioningResult.value : null
 
     setLastResults({ scraper, sentiment, positioning })
@@ -269,7 +262,6 @@ export default function App() {
         setReportHtml(html)
       }
       updateSpoke('report', { status: 'done' })
-      // Persist the completed report
       const now = Date.now()
       setReportDate(now)
       if (session) {
@@ -315,11 +307,7 @@ export default function App() {
   // ── Render guards ────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div style={{
-        position: 'fixed', inset: 0, background: '#0f0f23',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: '#888', fontFamily: 'monospace', fontSize: 13,
-      }}>
+      <div className="fixed inset-0 bg-slate-50 flex items-center justify-center text-sm text-slate-400 font-mono">
         Loading…
       </div>
     )
@@ -347,9 +335,12 @@ export default function App() {
     )
   }
 
+  const spokesActive = spokes.scraper.status !== 'idle'
+  const analyzing    = running && !reportHtml
+
   // ── Main app ─────────────────────────────────────────────────────────────
   return (
-    <>
+    <div className="min-h-screen bg-slate-50 flex flex-col">
       <DevModeToggle hasApiKey={!!apiKey} onOpenAccount={() => setShowAccount(true)} />
 
       {showAccount && session && sessionPassword && (
@@ -363,226 +354,193 @@ export default function App() {
         />
       )}
 
-      <style>{`
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #0f0f23; color: #e0e0e0; font-family: system-ui, sans-serif; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
-        input:focus { border-color: #6c63ff !important; }
-        ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: #2a2a4a; border-radius: 2px; }
-      `}</style>
+      {showProductPicker && (
+        <ProductPicker
+          products={sharedProducts}
+          favoriteId={favoriteProductId}
+          onSelect={handleSelectProduct}
+          onSetFavorite={handleSetFavorite}
+          onAddProduct={handleAddProduct}
+          onClose={() => setShowProductPicker(false)}
+        />
+      )}
 
       {/* Header */}
-      <header style={{
-        borderBottom: '1px solid #1e1e3a', padding: '20px 40px',
-        display: 'flex', alignItems: 'center', gap: 16,
-      }}>
-        <div>
-          <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: -0.5, color: '#e0e0e0' }}>
-            SPYKE
+      <header className="bg-white border-b border-slate-200 px-6 py-3.5 flex items-center gap-4 flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center flex-shrink-0">
+            <span className="text-white text-xs font-black tracking-tighter">S</span>
           </div>
-          <div style={{ fontSize: 12, color: '#888', letterSpacing: 2, textTransform: 'uppercase' }}>
-            Competitive Intelligence
+          <div>
+            <div className="text-sm font-bold text-slate-900 tracking-tight leading-none">Spyke</div>
+            <div className="text-[10px] text-slate-400 uppercase tracking-widest mt-0.5">Competitive Intelligence</div>
           </div>
         </div>
-        {/* Account button */}
         <button
           onClick={() => setShowAccount(true)}
-          style={{
-            marginLeft: 'auto', background: 'none', border: '1px solid #2a2a4a',
-            borderRadius: 20, color: '#888', fontSize: 12, fontFamily: 'monospace',
-            cursor: 'pointer', padding: '5px 14px', letterSpacing: 0.5,
-          }}
+          className="ml-auto text-xs text-slate-500 font-mono bg-white border border-slate-200 rounded-full px-3 py-1.5 hover:border-slate-300 hover:text-slate-700 transition-colors cursor-pointer"
         >
           {session?.email}
         </button>
       </header>
 
-      {/* Main */}
-      <main style={{ maxWidth: 860, margin: '0 auto', padding: '40px 20px' }}>
+      {/* 2-column layout */}
+      <div className="flex flex-1 min-h-0 gap-0">
 
-        {/* Your product */}
-        <div style={{ marginBottom: 32, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ fontSize: 11, color: '#888', letterSpacing: 1, textTransform: 'uppercase', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
-            YOUR PRODUCT
-          </div>
-          <div style={{
-            flex: 1, padding: '8px 14px', background: '#0d0d20',
-            border: '1px solid #1e1e3a', borderRadius: 6,
-            display: 'flex', alignItems: 'center', gap: 10, minWidth: 0,
-          }}>
-            <span style={{ fontSize: 14, color: '#e0e0e0', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {myProduct.name}
-            </span>
-            {myProduct.category && (
-              <span style={{ fontSize: 11, color: '#555', whiteSpace: 'nowrap' }}>{myProduct.category}</span>
-            )}
-          </div>
-          <button
-            onClick={() => setShowProductPicker(true)}
-            style={{
-              background: 'none', border: '1px solid #2a2a4a', borderRadius: 6,
-              color: '#aaa', fontSize: 12, cursor: 'pointer', padding: '6px 14px',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            Change
-          </button>
-        </div>
+        {/* Left column — controls + spokes */}
+        <div className="w-[380px] flex-shrink-0 flex flex-col border-r border-slate-200 bg-white overflow-y-auto">
+          <div className="p-5 space-y-5">
 
-        {showProductPicker && (
-          <ProductPicker
-            products={sharedProducts}
-            favoriteId={favoriteProductId}
-            onSelect={handleSelectProduct}
-            onSetFavorite={handleSetFavorite}
-            onAddProduct={handleAddProduct}
-            onClose={() => setShowProductPicker(false)}
-          />
-        )}
+            {/* Your product */}
+            <div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Your product</div>
+              <div className="flex items-center gap-2 p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+                <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[11px] font-bold text-indigo-500 flex-shrink-0">
+                  {myProduct.name.slice(0, 2).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-slate-800 truncate">{myProduct.name}</div>
+                  {myProduct.category && (
+                    <div className="text-[11px] text-slate-400 truncate">{myProduct.category}</div>
+                  )}
+                </div>
+                <button
+                  onClick={() => setShowProductPicker(true)}
+                  className="text-xs font-medium text-indigo-500 hover:text-indigo-700 cursor-pointer bg-transparent border-0 flex-shrink-0 transition-colors"
+                >
+                  Change
+                </button>
+              </div>
+            </div>
 
-        {/* Input */}
-        <div style={{ marginBottom: 40 }}>
-          <div style={{ fontSize: 13, color: '#6c63ff', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>
-            SaaS B2B Competitor
-          </div>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <input
-              value={competitor}
-              onChange={e => setCompetitor(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleAnalyze()}
-              placeholder="HubSpot, Salesforce, Pipedrive..."
-              disabled={running}
-              style={{
-                flex: 1, padding: '14px 18px', background: '#0d0d20',
-                border: '1px solid #2a2a4a', borderRadius: 8, color: '#e0e0e0',
-                fontSize: 16, outline: 'none', transition: 'border-color 0.2s',
-              }}
-            />
-            <button
-              onClick={handleAnalyze}
-              disabled={running || !competitor.trim()}
-              style={{
-                padding: '14px 28px',
-                background: running || !competitor.trim() ? '#1e1e3a' : '#6c63ff',
-                border: 'none', borderRadius: 8, color: running ? '#888' : '#fff',
-                fontSize: 14, fontWeight: 700, cursor: running ? 'not-allowed' : 'pointer',
-                transition: 'background 0.2s', whiteSpace: 'nowrap',
-              }}
-            >
-              {running ? 'Analyzing...' : '▶ Analyze'}
-            </button>
-          </div>
-          <input
-            value={focus}
-            onChange={e => setFocus(e.target.value)}
-            placeholder="Focus area (optional) — e.g. enterprise pricing, API integrations, onboarding..."
-            disabled={running}
-            style={{
-              width: '100%', marginTop: 10, padding: '10px 18px', background: '#0d0d20',
-              border: '1px solid #1e1e3a', borderRadius: 8, color: '#aaa',
-              fontSize: 13, outline: 'none', transition: 'border-color 0.2s',
-            }}
-          />
-          <div style={{ marginTop: 8, fontSize: 12, color: '#777' }}>
-            {devMode
-              ? 'Model: Groq Llama 3.3 70B · sequential · Tavily search'
-              : 'Model: Sonnet 4.6 (spokes 1-3, web search) · Haiku 4.5 (report)'}
-          </div>
-        </div>
+            {/* Competitor input */}
+            <div>
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Competitor</div>
+              <div className="flex gap-2">
+                <input
+                  value={competitor}
+                  onChange={e => setCompetitor(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleAnalyze()}
+                  placeholder="HubSpot, Salesforce…"
+                  disabled={running}
+                  className="flex-1 px-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all disabled:opacity-50"
+                />
+                <button
+                  onClick={handleAnalyze}
+                  disabled={running || !competitor.trim()}
+                  className={`px-4 py-2.5 text-sm font-semibold rounded-lg transition-colors whitespace-nowrap ${
+                    running || !competitor.trim()
+                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                      : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm shadow-indigo-200 cursor-pointer'
+                  }`}
+                >
+                  {running ? '…' : 'Analyze'}
+                </button>
+              </div>
+              <input
+                value={focus}
+                onChange={e => setFocus(e.target.value)}
+                placeholder="Focus area (optional)"
+                disabled={running}
+                className="mt-2 w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all disabled:opacity-50"
+              />
+              <p className="mt-1.5 text-[11px] text-slate-400">
+                {devMode
+                  ? 'Groq Llama 3.3 70B · Tavily search'
+                  : 'Claude Sonnet 4.6 (spokes) · Haiku 4.5 (report)'}
+              </p>
+            </div>
 
-        {/* Past reports */}
-        {savedReports.length > 0 && (
-          <div style={{ marginBottom: 32 }}>
-            <button
-              onClick={() => setShowHistory(h => !h)}
-              style={{
-                background: 'none', border: '1px solid #1e1e3a', borderRadius: 6,
-                color: '#888', fontSize: 13, fontFamily: 'monospace', cursor: 'pointer',
-                padding: '5px 12px', letterSpacing: 1,
-              }}
-            >
-              {showHistory ? '▾' : '▸'} PAST REPORTS ({savedReports.length})
-            </button>
+            {/* Past reports */}
+            {savedReports.length > 0 && (
+              <div>
+                <button
+                  onClick={() => setShowHistory(h => !h)}
+                  className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors cursor-pointer bg-transparent border-0"
+                >
+                  <span>{showHistory ? '▾' : '▸'}</span>
+                  <span>Past reports ({savedReports.length})</span>
+                </button>
 
-            {showHistory && (
-              <div style={{
-                marginTop: 12, padding: '8px 0', background: '#0d0d20',
-                border: '1px solid #1e1e3a', borderRadius: 8,
-              }}>
-                {savedReports.map(r => (
-                  <div
-                    key={r.id}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 12,
-                      padding: '8px 16px', borderBottom: '1px solid #1a1a30',
-                    }}
-                  >
-                    <span style={{ flex: 1, fontSize: 14, color: '#e0e0e0' }}>{r.competitor}</span>
-                    <span style={{ fontSize: 12, color: '#555', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
-                      {new Date(r.createdAt).toLocaleDateString()} {new Date(r.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                    <button
-                      onClick={() => { setCompetitor(r.competitor); setReportHtml(r.html); setReportDate(r.createdAt); setShowHistory(false) }}
-                      style={{
-                        padding: '4px 12px', background: 'none', border: '1px solid #2a2a4a',
-                        borderRadius: 6, color: '#aaa', fontSize: 12, cursor: 'pointer',
-                      }}
-                    >
-                      Load
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (!session) return
-                        deleteReport(session.uid, r.id)
-                          .then(() => setSavedReports(prev => prev.filter(x => x.id !== r.id)))
-                          .catch(() => {})
-                      }}
-                      style={{
-                        padding: '4px 8px', background: 'none', border: '1px solid #3a1a1a',
-                        borderRadius: 6, color: '#7a3a3a', fontSize: 12, cursor: 'pointer',
-                      }}
-                    >
-                      ×
-                    </button>
+                {showHistory && (
+                  <div className="mt-2 border border-slate-200 rounded-xl overflow-hidden">
+                    {savedReports.map(r => (
+                      <div
+                        key={r.id}
+                        className="flex items-center gap-2 px-3 py-2.5 border-b border-slate-100 last:border-b-0 hover:bg-slate-50 transition-colors"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-slate-700 truncate">{r.competitor}</div>
+                          <div className="text-[10px] text-slate-400 font-mono">
+                            {new Date(r.createdAt).toLocaleDateString()} {new Date(r.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => { setCompetitor(r.competitor); setReportHtml(r.html); setReportDate(r.createdAt); setShowHistory(false) }}
+                          className="text-xs text-indigo-500 hover:text-indigo-700 cursor-pointer bg-transparent border-0 font-medium flex-shrink-0 transition-colors"
+                        >
+                          Load
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (!session) return
+                            deleteReport(session.uid, r.id)
+                              .then(() => setSavedReports(prev => prev.filter(x => x.id !== r.id)))
+                              .catch(() => {})
+                          }}
+                          className="text-slate-300 hover:text-red-400 cursor-pointer bg-transparent border-0 text-base leading-none flex-shrink-0 transition-colors"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
             )}
           </div>
-        )}
 
-        {/* Spokes progress */}
-        {spokes.scraper.status !== 'idle' && (
-          <div style={{ display: 'grid', gap: 12, marginBottom: 32 }}>
-            <SpokeLog name="SPOKE 1" label="Web Scraper" status={spokes.scraper.status} log={spokes.scraper.log} model={devMode ? 'groq:llama-3.3-70b' : 'sonnet-4.6'} />
-            <SpokeLog name="SPOKE 2" label="Sentiment Analyst" status={spokes.sentiment.status} log={spokes.sentiment.log} model={devMode ? 'groq:llama-3.3-70b' : 'sonnet-4.6'} />
-            <SpokeLog name="SPOKE 3" label="Positioning Analyst" status={spokes.positioning.status} log={spokes.positioning.log} model={devMode ? 'groq:llama-3.3-70b' : 'sonnet-4.6'} />
-            <SpokeLog name="SPOKE 4" label="Report Writer" status={spokes.report.status} log={spokes.report.log} model={devMode ? 'groq:llama-3.3-70b' : 'haiku-4.5'} />
-          </div>
-        )}
-
-        {/* Report */}
-        {reportHtml && (
-          <ReportPanel
-            html={reportHtml}
-            streaming={streaming}
-            reportDate={reportDate}
-            onDeepAnalysis={!streaming ? handleDeepAnalysis : undefined}
-            deepLoading={deepLoading}
-          />
-        )}
-
-        {/* Empty state */}
-        {spokes.scraper.status === 'idle' && (
-          <div style={{ textAlign: 'center', padding: '80px 0', color: '#4a4a6a' }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>◎</div>
-            <div style={{ fontFamily: 'monospace', fontSize: 14 }}>
-              Enter a competitor name to start the analysis
+          {/* Spokes */}
+          {spokesActive && (
+            <div className="px-5 pb-5 space-y-2 border-t border-slate-100 pt-4">
+              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Research spokes</div>
+              <SpokeLog name="SPOKE 1" label="Web Scraper"         status={spokes.scraper.status}    log={spokes.scraper.log}    model={devMode ? 'groq:llama-3.3-70b' : 'sonnet-4.6'} />
+              <SpokeLog name="SPOKE 2" label="Sentiment Analyst"   status={spokes.sentiment.status}  log={spokes.sentiment.log}  model={devMode ? 'groq:llama-3.3-70b' : 'sonnet-4.6'} />
+              <SpokeLog name="SPOKE 3" label="Positioning Analyst" status={spokes.positioning.status} log={spokes.positioning.log} model={devMode ? 'groq:llama-3.3-70b' : 'sonnet-4.6'} />
+              <SpokeLog name="SPOKE 4" label="Report Writer"       status={spokes.report.status}     log={spokes.report.log}     model={devMode ? 'groq:llama-3.3-70b' : 'haiku-4.5'} />
             </div>
-          </div>
-        )}
-      </main>
-    </>
+          )}
+
+          {/* Empty state */}
+          {!spokesActive && (
+            <div className="flex-1 flex flex-col items-center justify-center text-center px-5 pb-10 text-slate-400">
+              <div className="text-3xl mb-3 opacity-30">◎</div>
+              <p className="text-sm">Enter a competitor name to start the analysis</p>
+            </div>
+          )}
+        </div>
+
+        {/* Right column — report */}
+        <div className="flex-1 flex flex-col min-h-0 p-6">
+          {(reportHtml || analyzing) ? (
+            <ReportPanel
+              html={reportHtml}
+              streaming={streaming}
+              reportDate={reportDate}
+              onDeepAnalysis={!streaming ? handleDeepAnalysis : undefined}
+              deepLoading={deepLoading}
+              analyzing={analyzing}
+              competitorName={competitor}
+            />
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-center text-slate-400">
+              <div className="text-4xl mb-4 opacity-20">◎</div>
+              <p className="text-sm font-medium text-slate-500">Report will appear here</p>
+              <p className="text-xs mt-1">Run an analysis to generate a competitive report</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }

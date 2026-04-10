@@ -8,59 +8,63 @@ interface Props {
   model: string
 }
 
-const STATUS_COLOR: Record<SpokeStatus, string> = {
-  idle: '#777',
-  running: '#6c63ff',
-  done: '#4caf50',
-  error: '#f44336',
+const BADGE: Record<SpokeStatus, string> = {
+  idle:    'bg-slate-100 text-slate-400',
+  running: 'bg-indigo-100 text-indigo-700',
+  done:    'bg-green-100 text-green-700',
+  error:   'bg-red-100 text-red-700',
 }
 
-const STATUS_ICON: Record<SpokeStatus, string> = {
-  idle: '○',
-  running: '◌',
-  done: '●',
-  error: '✗',
+const BADGE_LABEL: Record<SpokeStatus, string> = {
+  idle:    'Waiting',
+  running: 'Running',
+  done:    'Done',
+  error:   'Error',
+}
+
+const BORDER: Record<SpokeStatus, string> = {
+  idle:    'border-slate-200',
+  running: 'border-indigo-200 shadow-[0_0_0_3px_rgba(99,102,241,0.07)]',
+  done:    'border-green-200',
+  error:   'border-red-200',
 }
 
 export default function SpokeLog({ name, label, status, log, model }: Props) {
   return (
-    <div style={{
-      background: '#0d0d20', border: `1px solid ${status === 'running' ? '#6c63ff44' : '#1e1e3a'}`,
-      borderRadius: 8, padding: '14px 16px', transition: 'border-color 0.3s',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: log.length ? 10 : 0 }}>
-        <span style={{
-          color: STATUS_COLOR[status], fontSize: 16,
-          animation: status === 'running' ? 'spin 1s linear infinite' : 'none',
-        }}>
-          {STATUS_ICON[status]}
+    <div className={`bg-white border rounded-xl px-3 py-2.5 transition-all duration-200 ${BORDER[status]}`}>
+      <div className="flex items-center gap-2 mb-1">
+        {/* Status badge */}
+        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wide ${BADGE[status]}`}>
+          {status === 'running' && (
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse-dot inline-block" />
+          )}
+          {BADGE_LABEL[status]}
         </span>
-        <span style={{ color: '#e0e0e0', fontFamily: 'monospace', fontSize: 14, fontWeight: 600 }}>
-          {name}
-        </span>
-        <span style={{ color: '#888', fontSize: 13, fontFamily: 'monospace' }}>{label}</span>
-        <span style={{ marginLeft: 'auto', color: '#777', fontSize: 12, fontFamily: 'monospace' }}>{model}</span>
+
+        <span className="text-slate-700 font-semibold text-xs font-mono">{name}</span>
+        <span className="text-slate-400 text-xs">·</span>
+        <span className="text-slate-500 text-xs">{label}</span>
+        <span className="ml-auto text-[10px] text-slate-300 font-mono">{model}</span>
       </div>
+
+      {/* Error box */}
       {status === 'error' && log.length > 0 && (
-        <div style={{
-          margin: '8px 0 4px', padding: '6px 10px', background: '#2a0a0a',
-          border: '1px solid #f4433633', borderRadius: 6,
-          fontFamily: 'monospace', fontSize: 13, color: '#f44336',
-        }}>
+        <div className="mt-1 mb-1 px-2.5 py-1.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600 font-mono animate-fade-up">
           ✗ {log.filter(l => l.startsWith('Error:')).at(-1) ?? log.at(-1)}
         </div>
       )}
-      {log.length > 0 && (
-        <div style={{
-          fontFamily: 'monospace', fontSize: 12, color: '#999', lineHeight: 1.7,
-          borderTop: '1px solid #1e1e3a', paddingTop: 10, maxHeight: 100, overflowY: 'auto',
-        }}>
+
+      {/* Log lines */}
+      {log.length > 0 && status !== 'error' && (
+        <div className="border-t border-slate-100 pt-1.5 mt-1 max-h-20 overflow-y-auto">
           {log.map((line, i) => {
-            const isError = line.startsWith('Error:')
             const isLast = i === log.length - 1
             return (
-              <div key={i} style={{ color: isError ? '#f44336' : isLast ? '#ddd' : '#888' }}>
-                {'>'} {line}
+              <div
+                key={i}
+                className={`font-mono text-[10px] leading-relaxed ${isLast ? 'text-slate-600 animate-fade-up' : 'text-slate-400'}`}
+              >
+                &gt; {line}
               </div>
             )
           })}
