@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import SpokeLog from './components/SpokeLog'
 import ReportPanel from './components/ReportPanel'
 import AuthScreen from './components/AuthScreen'
+import DemoView from './components/DemoView'
 import AccountModal from './components/AccountModal'
 import UnlockModal from './components/UnlockModal'
 import DevModeToggle from './components/DevModeToggle'
@@ -69,6 +70,7 @@ export default function App() {
   const [favoriteProductId, setFavoriteProductId] = useState<string | null>(null)
   const [showProductPicker, setShowProductPicker] = useState(false)
   const [devMode,           setDevMode]           = useState(() => localStorage.getItem('devMode') === 'true')
+  const [showDemo,          setShowDemo]          = useState(false)
   const [lastResults,       setLastResults]       = useState<{
     scraper: ScraperData | null
     sentiment: SentimentData | null
@@ -346,7 +348,10 @@ export default function App() {
         <button onClick={toggleTheme} className="fixed top-3 right-3 z-50 w-8 h-8 flex items-center justify-center rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors shadow-sm cursor-pointer text-base">
           {theme === 'dark' ? '☀' : '☽'}
         </button>
-        <AuthScreen onLogin={handleLogin} />
+        {showDemo
+          ? <DemoView onSignUp={() => setShowDemo(false)} />
+          : <AuthScreen onLogin={handleLogin} onViewDemo={() => setShowDemo(true)} />
+        }
       </>
     )
   }

@@ -6,11 +6,12 @@ import { persistPassword } from '../services/cryptoService'
 
 interface Props {
   onLogin: (password: string) => void
+  onViewDemo?: () => void
 }
 
 type Mode = 'signin' | 'register'
 
-export default function AuthScreen({ onLogin }: Props) {
+export default function AuthScreen({ onLogin, onViewDemo }: Props) {
   const [mode,     setMode]     = useState<Mode>('signin')
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
@@ -59,8 +60,15 @@ export default function AuthScreen({ onLogin }: Props) {
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl p-10 w-full max-w-sm shadow-lg shadow-slate-200/60 dark:shadow-slate-900/60">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-slate-900 dark:bg-slate-100 mb-3">
-            <span className="text-white dark:text-slate-900 text-sm font-black tracking-tighter">S</span>
+          <div className="inline-flex items-center justify-center w-10 h-10 mb-3">
+            <svg viewBox="0 0 32 32" className="w-10 h-10" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="16" cy="16" r="10" fill="none" stroke="#6c63ff" strokeWidth="1.5"/>
+              <line x1="16" y1="3"    x2="16" y2="9.5"  stroke="#6c63ff" strokeWidth="1.5" strokeLinecap="round"/>
+              <line x1="16" y1="22.5" x2="16" y2="29"   stroke="#6c63ff" strokeWidth="1.5" strokeLinecap="round"/>
+              <line x1="3"  y1="16"   x2="9.5" y2="16"  stroke="#6c63ff" strokeWidth="1.5" strokeLinecap="round"/>
+              <line x1="22.5" y1="16" x2="29" y2="16"   stroke="#6c63ff" strokeWidth="1.5" strokeLinecap="round"/>
+              <circle cx="16" cy="16" r="2.5" fill="#6c63ff"/>
+            </svg>
           </div>
           <div className="text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight">Spyke</div>
           <div className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">Competitive Intelligence</div>
@@ -100,6 +108,16 @@ export default function AuthScreen({ onLogin }: Props) {
             {loading ? '…' : mode === 'signin' ? 'Sign in' : 'Create account'}
           </button>
         </form>
+        {onViewDemo && (
+          <div className="mt-6 text-center">
+            <button
+              onClick={onViewDemo}
+              className="text-xs text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors cursor-pointer bg-transparent border-0"
+            >
+              See a sample report →
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
