@@ -11,7 +11,8 @@
 
 import type { EncryptedKeyBundle } from '../types'
 
-const PBKDF2_ITERATIONS = 600_000
+const PBKDF2_ITERATIONS         = 600_000
+const PBKDF2_ITERATIONS_LEGACY  = 100_000
 const SESSION_PW_KEY    = 'spyke_session_pw'
 
 // ── Hex helpers ────────────────────────────────────────────────────────────
@@ -99,14 +100,38 @@ export async function encryptApiKey(apiKey: string, password: string): Promise<E
 /**
  * Decrypt an Anthropic API key.
  * Returns null if the password is wrong or the ciphertext was tampered with.
+ *
+ * Migration: tries current iteration count (600k) first; if that fails,
+ * falls back to the legacy count (100k). Callers should re-encrypt with
+ * encryptApiKey() and persist when the legacy path succeeds, so the bundle
+ * is silently upgraded on next unlock.
  */
 export async function decryptApiKey(bundle: EncryptedKeyBundle, password: string): Promise<string | null> {
   if (!bundle.encryptedKey) return null
+
+  // Try current iteration count first
   try {
-    const aesKey  = await deriveAesKey(password, bundle.keySalt, 'decrypt')
-    const plain   = await crypto.subtle.decrypt(
+    const aesKey = await deriveAesKey(password, bundle.keySalt, 'decrypt')
+    const plain  = await crypto.subtle.decrypt(
       { name: 'AES-GCM', iv: hexToBytes(bundle.keyIv) },
       aesKey,
+      hexToBytes(bundle.encryptedKey),
+    )
+    return new TextDecoder().decode(plain)
+  } catch { /* fall through to legacy */ }
+
+  // Legacy fallback: bundle was encrypted with 100k iterations
+  try {
+    const legacyKey = await crypto.subtle.deriveKey(
+      { name: 'PBKDF2', hash: 'SHA-256', salt: hexToBytes(bundle.keySalt), iterations: PBKDF2_ITERATIONS_LEGACY },
+      await getKeyMaterial(password),
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['decrypt'],
+    )
+    const plain = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: hexToBytes(bundle.keyIv) },
+      legacyKey,
       hexToBytes(bundle.encryptedKey),
     )
     return new TextDecoder().decode(plain)
