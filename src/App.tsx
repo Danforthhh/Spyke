@@ -3,6 +3,7 @@ import SpokeLog from './components/SpokeLog'
 import ReportPanel from './components/ReportPanel'
 import AuthScreen from './components/AuthScreen'
 import DemoView from './components/DemoView'
+import LandingPage from './components/LandingPage'
 import AccountModal from './components/AccountModal'
 import UnlockModal from './components/UnlockModal'
 import DevModeToggle from './components/DevModeToggle'
@@ -72,6 +73,7 @@ export default function App() {
   const [showProductPicker, setShowProductPicker] = useState(false)
   const [devMode,           setDevMode]           = useState(() => localStorage.getItem('devMode') === 'true')
   const [showDemo,          setShowDemo]          = useState(false)
+  const [showLanding,       setShowLanding]       = useState(true)
 
   // ── Compare mode ─────────────────────────────────────────────────────────
   const [analysisMode,       setAnalysisMode]       = useState<'single' | 'compare'>('single')
@@ -170,6 +172,7 @@ export default function App() {
     setShowUnlock(false); setShowAccount(false)
     setSavedReports([]); setSharedProducts([])
     setFavoriteProductId(null); setMyProduct(DEFAULT_MY_PRODUCT)
+    setShowLanding(true); setShowDemo(false)
   }
 
   const handleSelectProduct = (product: SharedProduct) => setMyProduct(product)
@@ -479,15 +482,26 @@ export default function App() {
   }
 
   if (!user) {
+    if (showDemo) {
+      return <DemoView onSignUp={() => { setShowDemo(false); setShowLanding(false) }} />
+    }
+    if (showLanding) {
+      return (
+        <LandingPage
+          onGetStarted={() => setShowLanding(false)}
+          onViewDemo={() => setShowDemo(true)}
+        />
+      )
+    }
     return (
       <>
         <button onClick={toggleTheme} className="fixed top-3 right-3 z-50 w-8 h-8 flex items-center justify-center rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors shadow-sm cursor-pointer text-base">
           {theme === 'dark' ? '☀' : '☽'}
         </button>
-        {showDemo
-          ? <DemoView onSignUp={() => setShowDemo(false)} />
-          : <AuthScreen onLogin={handleLogin} onViewDemo={() => setShowDemo(true)} />
-        }
+        <AuthScreen
+          onLogin={handleLogin}
+          onViewDemo={() => setShowDemo(true)}
+        />
       </>
     )
   }
