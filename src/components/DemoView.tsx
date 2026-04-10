@@ -2,9 +2,10 @@ import { DEMO_REPORT_HTML, DEMO_COMPETITOR, DEMO_PRODUCT } from '../data/demoRep
 
 interface Props {
   onSignUp: () => void
+  onBack?: () => void
 }
 
-export default function DemoView({ onSignUp }: Props) {
+export default function DemoView({ onSignUp, onBack }: Props) {
   return (
     <div className="fixed inset-0 bg-slate-50 dark:bg-slate-950 flex flex-col">
 
@@ -31,6 +32,14 @@ export default function DemoView({ onSignUp }: Props) {
         </p>
 
         <div className="flex items-center gap-2 flex-shrink-0">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="text-xs text-indigo-200 hover:text-white transition-colors cursor-pointer bg-transparent border-0"
+            >
+              ← Back
+            </button>
+          )}
           <button
             onClick={onSignUp}
             className="text-xs font-semibold px-4 py-1.5 bg-white text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors cursor-pointer"

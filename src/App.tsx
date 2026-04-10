@@ -483,7 +483,7 @@ export default function App() {
 
   if (!user) {
     if (showDemo) {
-      return <DemoView onSignUp={() => { setShowDemo(false); setShowLanding(false) }} />
+      return <DemoView onSignUp={() => { setShowDemo(false); setShowLanding(false) }} onBack={() => setShowDemo(false)} />
     }
     if (showLanding) {
       return (
