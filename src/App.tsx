@@ -395,7 +395,6 @@ export default function App() {
         {/* Logo */}
         <div className="flex items-center gap-3">
           <svg viewBox="0 0 32 32" className="w-8 h-8 flex-shrink-0" xmlns="http://www.w3.org/2000/svg">
-            <rect width="32" height="32" rx="6" fill="#0f0f23"/>
             <circle cx="16" cy="16" r="10" fill="none" stroke="#6c63ff" strokeWidth="1.5"/>
             <line x1="16" y1="3"    x2="16" y2="9.5"  stroke="#6c63ff" strokeWidth="1.5" strokeLinecap="round"/>
             <line x1="16" y1="22.5" x2="16" y2="29"   stroke="#6c63ff" strokeWidth="1.5" strokeLinecap="round"/>
