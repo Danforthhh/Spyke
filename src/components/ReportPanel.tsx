@@ -6,15 +6,16 @@ interface Props {
   reportDate?: number
   onDeepAnalysis?: () => void
   deepLoading?: boolean
-  /** When true, the panel renders the spinner (spokes still running, no html yet) */
+  /** When true, renders the spinner (spokes still running, no html yet) */
   analyzing?: boolean
   competitorName?: string
+  /** Live status string shown under the analyzing spinner */
+  spokeStatus?: string
 }
 
-export default function ReportPanel({ html, streaming, reportDate, onDeepAnalysis, deepLoading, analyzing, competitorName }: Props) {
+export default function ReportPanel({ html, streaming, reportDate, onDeepAnalysis, deepLoading, analyzing, competitorName, spokeStatus }: Props) {
   const isComplete = !streaming && html.includes('</html>')
 
-  // Debounce iframe updates while streaming — prevents O(n²) DOM reflows
   const [displayHtml, setDisplayHtml] = useState(html)
   useEffect(() => {
     if (!streaming) { setDisplayHtml(html); return }
@@ -31,14 +32,14 @@ export default function ReportPanel({ html, streaming, reportDate, onDeepAnalysi
       {/* Header */}
       <div className="flex items-center gap-3 mb-3 flex-shrink-0">
         <div>
-          <h2 className="text-sm font-semibold text-slate-800">{title}</h2>
+          <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{title}</h2>
           {reportDate && !streaming && (
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
               {new Date(reportDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
             </p>
           )}
           {streaming && (
-            <p className="text-xs text-indigo-500 mt-0.5">Generating…</p>
+            <p className="text-xs text-indigo-500 dark:text-indigo-400 mt-0.5">Generating…</p>
           )}
         </div>
         {isComplete && onDeepAnalysis && (
@@ -47,8 +48,8 @@ export default function ReportPanel({ html, streaming, reportDate, onDeepAnalysi
             disabled={deepLoading}
             className={`ml-auto text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
               deepLoading
-                ? 'border-slate-200 text-slate-400 cursor-not-allowed bg-slate-50'
-                : 'border-indigo-300 text-indigo-600 hover:bg-indigo-50 cursor-pointer'
+                ? 'border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-600 cursor-not-allowed bg-slate-50 dark:bg-slate-800'
+                : 'border-indigo-300 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950 cursor-pointer'
             }`}
           >
             {deepLoading ? 'Generating with Opus 4.6…' : '✦ Deep analysis (Opus 4.6)'}
@@ -56,19 +57,21 @@ export default function ReportPanel({ html, streaming, reportDate, onDeepAnalysi
         )}
       </div>
 
-      {/* Spinner — shown while spokes are running and no report yet */}
+      {/* Analyzing spinner — spokes running, no report yet */}
       {analyzing && !html && (
-        <div className="flex-1 flex flex-col items-center justify-center gap-5 bg-white rounded-xl border border-slate-200 shadow-sm min-h-[420px]">
-          {/* Ring spinner */}
+        <div className="flex-1 flex flex-col items-center justify-center gap-5 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm min-h-[420px]">
           <div className="relative w-12 h-12">
-            <div className="absolute inset-0 rounded-full border-2 border-slate-200" />
+            <div className="absolute inset-0 rounded-full border-2 border-slate-200 dark:border-slate-700" />
             <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-indigo-500 border-r-indigo-300 animate-spin-smooth" />
           </div>
           <div className="text-center space-y-1">
-            <p className="text-sm font-medium text-slate-600">Generating report…</p>
-            <p className="text-xs text-slate-400">Waiting for research spokes</p>
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Generating report…</p>
+            {spokeStatus ? (
+              <p className="text-xs text-indigo-500 dark:text-indigo-400 font-mono">{spokeStatus}</p>
+            ) : (
+              <p className="text-xs text-slate-400 dark:text-slate-500">Waiting for research spokes</p>
+            )}
           </div>
-          {/* Skeleton lines */}
           <div className="w-full max-w-xs space-y-2 px-4">
             <div className="h-2 rounded-full animate-shimmer" style={{ width: '72%' }} />
             <div className="h-2 rounded-full animate-shimmer" style={{ width: '90%', animationDelay: '.1s' }} />
@@ -79,14 +82,14 @@ export default function ReportPanel({ html, streaming, reportDate, onDeepAnalysi
         </div>
       )}
 
-      {/* Streaming spinner — report is being written */}
+      {/* Streaming spinner — report being written */}
       {streaming && !displayHtml && (
-        <div className="flex-1 flex flex-col items-center justify-center gap-5 bg-white rounded-xl border border-indigo-100 shadow-sm min-h-[420px]">
+        <div className="flex-1 flex flex-col items-center justify-center gap-5 bg-white dark:bg-slate-800 rounded-xl border border-indigo-100 dark:border-indigo-900 shadow-sm min-h-[420px]">
           <div className="relative w-12 h-12">
-            <div className="absolute inset-0 rounded-full border-2 border-indigo-100" />
+            <div className="absolute inset-0 rounded-full border-2 border-indigo-100 dark:border-indigo-900" />
             <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-indigo-500 animate-spin-smooth" />
           </div>
-          <p className="text-sm font-medium text-slate-600">Writing report…</p>
+          <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Writing report…</p>
         </div>
       )}
 
@@ -94,7 +97,7 @@ export default function ReportPanel({ html, streaming, reportDate, onDeepAnalysi
       {displayHtml && (
         <iframe
           srcDoc={displayHtml}
-          className="flex-1 w-full min-h-[420px] border border-slate-200 rounded-xl bg-white shadow-sm"
+          className="flex-1 w-full min-h-[420px] border border-slate-200 dark:border-slate-700 rounded-xl bg-white shadow-sm"
           title="Competitive report"
           sandbox="allow-scripts"
         />
@@ -111,7 +114,7 @@ export default function ReportPanel({ html, streaming, reportDate, onDeepAnalysi
               a.download = 'competitive-report.html'
               a.click()
             }}
-            className="text-xs px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-500 hover:border-slate-300 hover:text-slate-700 transition-colors cursor-pointer"
+            className="text-xs px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
           >
             Download HTML
           </button>
@@ -123,7 +126,7 @@ export default function ReportPanel({ html, streaming, reportDate, onDeepAnalysi
               win.document.close()
               win.addEventListener('load', () => { win.focus(); win.print() })
             }}
-            className="text-xs px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-slate-500 hover:border-slate-300 hover:text-slate-700 transition-colors cursor-pointer"
+            className="text-xs px-3 py-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
           >
             Export PDF
           </button>

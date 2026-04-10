@@ -99,7 +99,7 @@ export default function DevModeToggle({ hasApiKey, onOpenAccount }: Props) {
         : 'DEV mode — free Groq + Tavily\nClick to switch to PROD'
 
   return (
-    <div className="fixed top-3 right-3 z-50 flex flex-col items-end gap-1.5">
+    <div className="relative flex flex-col items-end gap-1.5">
       <button
         onClick={toggle}
         title={title}
@@ -109,11 +109,11 @@ export default function DevModeToggle({ hasApiKey, onOpenAccount }: Props) {
       </button>
 
       {showNoKey && (
-        <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-600 max-w-[220px] text-right leading-relaxed shadow-lg shadow-slate-200/60">
+        <div className="absolute top-full mt-1.5 right-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-600 dark:text-slate-300 max-w-[220px] text-right leading-relaxed shadow-lg shadow-slate-200/60 dark:shadow-slate-900/60 z-50">
           PROD requires an API key.{' '}
           <button
             onClick={() => { setShowNoKey(false); onOpenAccount() }}
-            className="text-indigo-500 hover:text-indigo-700 cursor-pointer bg-transparent border-0 font-medium"
+            className="text-indigo-500 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 cursor-pointer bg-transparent border-0 font-medium"
           >
             Add one in Settings
           </button>

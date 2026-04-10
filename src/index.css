@@ -2,6 +2,8 @@
 
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, monospace;
@@ -22,6 +24,7 @@ body {
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 2px; }
+.dark ::-webkit-scrollbar-thumb { background: #334155; }
 
 /* Spinner animation */
 @keyframes spin-smooth {

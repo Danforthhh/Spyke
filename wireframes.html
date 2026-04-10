@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spyke — Wireframes UI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #111; font-family: 'Inter', system-ui, sans-serif; color: #fff; min-height: 100vh; }
+
+/* ── Tab bar ─────────────────────────────────────────────── */
+.tabs {
+  display: flex; gap: 0; background: #161616;
+  border-bottom: 1px solid #2a2a2a;
+  padding: 0 24px; position: sticky; top: 0; z-index: 100;
+}
+.tab {
+  padding: 13px 20px; font-size: 12px; font-weight: 500;
+  cursor: pointer; border-bottom: 2px solid transparent;
+  color: #666; transition: all .15s; white-space: nowrap;
+}
+.tab.active { color: #fff; border-bottom-color: #fff; }
+.tab:hover:not(.active) { color: #ccc; }
+
+.option-panel { display: none; }
+.option-panel.active { display: block; }
+
+/* ── Wrapper per option ──────────────────────────────────── */
+.option-section {
+  padding: 32px 32px 8px;
+  border-bottom: 1px solid #1e1e1e;
+}
+.option-label {
+  font-size: 11px; color: #555; letter-spacing: 1.5px;
+  text-transform: uppercase; font-family: 'Geist Mono', monospace;
+  margin-bottom: 16px; display: flex; align-items: center; gap: 12px;
+}
+.option-tag {
+  font-size: 10px; font-weight: 600; padding: 2px 8px;
+  border-radius: 4px; letter-spacing: 0.5px;
+}
+
+/* Spinner keyframes */
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse-glow { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes fade-in-line {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+@keyframes typing {
+  0%,100% { opacity: 1; } 50% { opacity: 0; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   OPTION A — Polish ciblé (navy amélioré)
+═══════════════════════════════════════════════════════════ */
+.a-wrap { background: #0f0f23; border-radius: 14px; overflow: hidden; border: 1px solid #2a2a4a; box-shadow: 0 8px 40px rgba(0,0,0,0.5); max-width: 900px; }
+
+/* Header */
+.a-header {
+  padding: 16px 24px; border-bottom: 1px solid #1e1e3a;
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(15,15,35,0.97);
+}
+.a-logo { font-size: 17px; font-weight: 700; letter-spacing: -0.5px; color: #e0e0e0; }
+.a-sub-text { font-size: 10px; color: #555; letter-spacing: 2px; text-transform: uppercase; }
+.a-email-btn {
+  margin-left: auto; background: none; border: 1px solid #2a2a4a;
+  border-radius: 20px; color: #666; font-size: 11px;
+  padding: 4px 14px; font-family: 'Geist Mono', monospace;
+}
+.a-dev-badge {
+  background: #16a34a; color: #fff; font-size: 10px;
+  padding: 3px 10px; border-radius: 20px; font-weight: 600;
+  font-family: 'Geist Mono', monospace;
+}
+
+/* 2-col layout */
+.a-body { display: grid; grid-template-columns: 340px 1fr; min-height: 480px; }
+
+/* Left col */
+.a-left { padding: 20px; border-right: 1px solid #1e1e3a; display: grid; gap: 18px; align-content: start; }
+.a-product-row {
+  display: flex; align-items: center; gap: 10px;
+  background: #0d0d20; border: 1px solid #1e1e3a;
+  border-radius: 8px; padding: 9px 12px;
+}
+.a-prod-label { font-size: 10px; color: #555; letter-spacing: 1px; text-transform: uppercase; font-family: 'Geist Mono', monospace; white-space: nowrap; }
+.a-prod-name { font-size: 13px; color: #e0e0e0; font-weight: 500; }
+.a-prod-cat { font-size: 10px; color: #555; }
+.a-change { background: none; border: 1px solid #2a2a4a; border-radius: 6px; color: #888; font-size: 11px; padding: 4px 10px; margin-left: auto; cursor: pointer; }
+
+.a-section-label { font-size: 10px; color: #6c63ff; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; }
+.a-inp-row { display: flex; gap: 8px; margin-bottom: 7px; }
+.a-inp {
+  flex: 1; padding: 10px 14px; background: #0d0d20;
+  border: 1px solid #2a2a4a; border-radius: 10px;
+  color: #555; font-size: 13px; font-family: 'Inter', sans-serif;
+}
+.a-analyze-btn {
+  padding: 10px 18px; background: #6c63ff; border: none;
+  border-radius: 10px; color: #fff; font-size: 12px; font-weight: 600;
+  white-space: nowrap; box-shadow: 0 4px 12px rgba(108,99,255,0.35);
+}
+.a-focus-inp {
+  width: 100%; padding: 8px 14px; background: #0d0d20;
+  border: 1px solid #1e1e3a; border-radius: 10px;
+  color: #555; font-size: 11px; font-family: 'Inter', sans-serif;
+}
+.a-hint-txt { font-size: 10px; color: #555; margin-top: 5px; }
+
+/* Spokes A */
+.a-spokes-grid { display: grid; gap: 7px; }
+.a-spoke-card {
+  background: #0d0d20; border: 1px solid #1e1e3a;
+  border-radius: 8px; padding: 10px 12px;
+}
+.a-spoke-card.sp-running { border-color: rgba(108,99,255,0.3); }
+.a-spoke-card.sp-done { border-color: rgba(76,175,80,0.25); }
+.a-spoke-card.sp-err { border-color: rgba(244,67,54,0.25); }
+.a-spoke-hd { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+.a-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.a-dot.running { background: #6c63ff; animation: pulse-glow 1.5s infinite; }
+.a-dot.done { background: #4caf50; }
+.a-dot.err { background: #f44336; }
+.a-dot.idle { background: #333; }
+.a-spoke-name { font-size: 11px; font-weight: 600; color: #ccc; }
+.a-spoke-model { margin-left: auto; font-size: 10px; color: #444; font-family: 'Geist Mono', monospace; }
+.a-spoke-log { font-size: 10px; color: #666; font-family: 'Geist Mono', monospace; animation: fade-in-line .3s ease; }
+
+/* Right col — report A */
+.a-right {
+  padding: 20px; display: flex; flex-direction: column;
+  background: #0b0b1e;
+}
+.a-report-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.a-report-title { font-size: 13px; color: #888; font-weight: 500; }
+.a-report-date { font-size: 11px; color: #444; margin-left: auto; font-family: 'Geist Mono', monospace; }
+
+/* Spinner area A */
+.a-spinner-area {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 16px; min-height: 340px;
+}
+.a-spinner {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 3px solid #1e1e3a;
+  border-top-color: #6c63ff;
+  animation: spin 0.8s linear infinite;
+}
+.a-spinner-label { font-size: 12px; color: #555; font-family: 'Geist Mono', monospace; }
+.a-spinner-cursor { animation: typing 1s step-end infinite; }
+
+/* Shimmer skeleton lines */
+.a-skeleton-wrap { width: 100%; display: grid; gap: 8px; }
+.a-skeleton-line {
+  height: 10px; border-radius: 5px;
+  background: linear-gradient(90deg, #1a1a30 25%, #22223a 50%, #1a1a30 75%);
+  background-size: 400px 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+/* Report iframe mock (loaded state) */
+.a-report-loaded { flex: 1; background: #fff; border-radius: 8px; border: 1px solid #1e1e3a; overflow: hidden; }
+.a-report-content { padding: 20px; color: #333; font-family: 'Inter', sans-serif; }
+.a-report-content h3 { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+.a-report-content p { font-size: 12px; color: #666; line-height: 1.6; }
+
+/* ═══════════════════════════════════════════════════════════
+   OPTION B — Design system / Linear-style
+═══════════════════════════════════════════════════════════ */
+.b-wrap { background: #09090f; border-radius: 14px; overflow: hidden; border: 1px solid rgba(255,255,255,0.06); box-shadow: 0 0 0 1px rgba(255,255,255,0.04), 0 24px 60px rgba(0,0,0,0.7); max-width: 900px; }
+
+.b-header {
+  padding: 14px 22px; border-bottom: 1px solid rgba(255,255,255,0.05);
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(9,9,15,0.95);
+}
+.b-logo-icon {
+  width: 26px; height: 26px; border-radius: 7px;
+  background: linear-gradient(135deg, #7c6af7, #a855f7);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800; color: #fff;
+  box-shadow: 0 0 10px rgba(124,106,247,0.4);
+}
+.b-logo { font-size: 14px; font-weight: 700; letter-spacing: -0.3px; color: #e4e4e7; }
+.b-sub-text { font-size: 10px; color: #3f3f46; letter-spacing: 1.5px; text-transform: uppercase; }
+.b-email-btn {
+  margin-left: auto; background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 8px; color: #52525b; font-size: 11px;
+  padding: 4px 12px; font-family: 'Geist Mono', monospace;
+}
+.b-dev-badge {
+  background: rgba(22,163,74,0.12); color: #4ade80;
+  font-size: 10px; padding: 3px 10px; border-radius: 6px;
+  font-weight: 600; border: 1px solid rgba(74,222,128,0.2);
+  font-family: 'Geist Mono', monospace;
+}
+
+.b-body { display: grid; grid-template-columns: 330px 1fr; min-height: 480px; }
+
+.b-left { padding: 18px; border-right: 1px solid rgba(255,255,255,0.04); display: grid; gap: 16px; align-content: start; }
+.b-product-row {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px; padding: 9px 12px;
+}
+.b-prod-label { font-size: 9px; color: #3f3f46; letter-spacing: 1.5px; text-transform: uppercase; font-family: 'Geist Mono', monospace; white-space: nowrap; }
+.b-prod-name { font-size: 13px; color: #e4e4e7; font-weight: 500; }
+.b-prod-cat { font-size: 10px; color: #3f3f46; }
+.b-change {
+  background: rgba(124,106,247,0.08); border: 1px solid rgba(124,106,247,0.18);
+  border-radius: 7px; color: #9d8ff7; font-size: 11px; padding: 4px 10px;
+  margin-left: auto; cursor: pointer; font-weight: 500;
+}
+
+.b-section-label { font-size: 10px; color: #7c6af7; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 8px; font-weight: 600; }
+.b-inp-row { display: flex; gap: 8px; margin-bottom: 7px; }
+.b-inp {
+  flex: 1; padding: 10px 14px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07); border-radius: 10px;
+  color: #52525b; font-size: 13px; font-family: 'Inter', sans-serif;
+}
+.b-analyze-btn {
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #7c6af7, #a855f7);
+  border: none; border-radius: 10px; color: #fff;
+  font-size: 12px; font-weight: 600; white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(124,106,247,0.4);
+}
+.b-focus-inp {
+  width: 100%; padding: 8px 14px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.04); border-radius: 10px;
+  color: #3f3f46; font-size: 11px; font-family: 'Inter', sans-serif;
+}
+.b-hint-txt { font-size: 10px; color: #3f3f46; margin-top: 5px; }
+
+.b-spokes-grid { display: grid; gap: 6px; }
+.b-spoke-card {
+  background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 10px; padding: 10px 12px; transition: border-color .2s;
+}
+.b-spoke-card.sp-running { border-color: rgba(124,106,247,0.25); background: rgba(124,106,247,0.03); }
+.b-spoke-card.sp-done { border-color: rgba(74,222,128,0.18); }
+.b-spoke-hd { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+.b-indicator { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.b-indicator.running { background: #7c6af7; box-shadow: 0 0 6px rgba(124,106,247,0.9); animation: pulse-glow 1.5s infinite; }
+.b-indicator.done { background: #4ade80; box-shadow: 0 0 5px rgba(74,222,128,0.7); }
+.b-indicator.idle { background: #27272a; }
+.b-spoke-name { font-size: 11px; font-weight: 600; color: #a1a1aa; }
+.b-spoke-model { margin-left: auto; font-size: 10px; color: #27272a; font-family: 'Geist Mono', monospace; }
+.b-spoke-log { font-size: 10px; color: #52525b; font-family: 'Geist Mono', monospace; }
+
+/* Right col B */
+.b-right { padding: 18px; display: flex; flex-direction: column; background: rgba(0,0,0,0.2); }
+.b-report-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.b-report-title { font-size: 12px; color: #52525b; font-weight: 500; }
+
+/* Spinner B */
+.b-spinner-area {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 18px; min-height: 340px;
+}
+.b-spinner-ring {
+  position: relative; width: 48px; height: 48px;
+}
+.b-spinner-ring::before {
+  content: '';
+  position: absolute; inset: 0; border-radius: 50%;
+  border: 2px solid rgba(124,106,247,0.15);
+}
+.b-spinner-ring::after {
+  content: '';
+  position: absolute; inset: 0; border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: #7c6af7;
+  border-right-color: rgba(168,85,247,0.5);
+  animation: spin 0.7s linear infinite;
+  filter: drop-shadow(0 0 6px rgba(124,106,247,0.6));
+}
+.b-spinner-icon {
+  position: absolute; inset: 0; display: flex;
+  align-items: center; justify-content: center;
+  font-size: 16px;
+}
+.b-spinner-label { font-size: 12px; color: #52525b; font-family: 'Geist Mono', monospace; }
+.b-spinner-sub { font-size: 10px; color: #3f3f46; }
+.b-cursor { animation: typing 1s step-end infinite; }
+
+.b-skeleton-wrap { width: 100%; display: grid; gap: 8px; }
+.b-skeleton-line {
+  height: 8px; border-radius: 4px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.03) 75%);
+  background-size: 400px 100%;
+  animation: shimmer 1.6s infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   OPTION C — Light mode / Tailwind
+═══════════════════════════════════════════════════════════ */
+.c-wrap { background: #f8fafc; border-radius: 14px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px rgba(0,0,0,0.05), 0 16px 40px rgba(0,0,0,0.08); max-width: 900px; }
+
+.c-header {
+  padding: 14px 22px; border-bottom: 1px solid #e2e8f0;
+  display: flex; align-items: center; gap: 12px; background: #fff;
+}
+.c-logo-icon {
+  width: 28px; height: 28px; border-radius: 8px; background: #0f172a;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800; color: #fff;
+}
+.c-logo { font-size: 15px; font-weight: 700; color: #0f172a; letter-spacing: -0.3px; }
+.c-sub-text { font-size: 10px; color: #94a3b8; }
+.c-email-btn {
+  margin-left: auto; background: #fff; border: 1px solid #e2e8f0;
+  border-radius: 8px; color: #64748b; font-size: 12px;
+  padding: 5px 14px; font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.c-dev-badge {
+  background: #f0fdf4; color: #16a34a;
+  font-size: 10px; padding: 3px 10px; border-radius: 20px;
+  font-weight: 600; border: 1px solid #bbf7d0;
+}
+
+.c-body { display: grid; grid-template-columns: 330px 1fr; min-height: 480px; }
+.c-left { padding: 18px; border-right: 1px solid #f1f5f9; background: #fff; display: grid; gap: 16px; align-content: start; }
+.c-product-row {
+  display: flex; align-items: center; gap: 10px;
+  background: #f8fafc; border: 1px solid #e2e8f0;
+  border-radius: 10px; padding: 9px 12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+.c-prod-label { font-size: 9px; color: #94a3b8; letter-spacing: 1.5px; text-transform: uppercase; font-weight: 600; white-space: nowrap; }
+.c-prod-name { font-size: 13px; color: #0f172a; font-weight: 600; }
+.c-prod-cat { font-size: 10px; color: #94a3b8; }
+.c-change {
+  background: #fff; border: 1px solid #e2e8f0;
+  border-radius: 7px; color: #475569; font-size: 11px; padding: 4px 10px;
+  margin-left: auto; cursor: pointer; font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.c-section-label { font-size: 10px; color: #6366f1; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 8px; font-weight: 600; }
+.c-inp-row { display: flex; gap: 8px; margin-bottom: 7px; }
+.c-inp {
+  flex: 1; padding: 10px 14px; background: #fff;
+  border: 1px solid #e2e8f0; border-radius: 10px;
+  color: #94a3b8; font-size: 13px; font-family: 'Inter', sans-serif;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+.c-analyze-btn {
+  padding: 10px 16px; background: #6366f1;
+  border: none; border-radius: 10px; color: #fff;
+  font-size: 12px; font-weight: 600; white-space: nowrap;
+  box-shadow: 0 4px 10px rgba(99,102,241,0.3);
+}
+.c-focus-inp {
+  width: 100%; padding: 8px 14px; background: #fff;
+  border: 1px solid #e2e8f0; border-radius: 10px;
+  color: #94a3b8; font-size: 11px; font-family: 'Inter', sans-serif;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+.c-hint-txt { font-size: 10px; color: #94a3b8; margin-top: 5px; }
+
+.c-spokes-grid { display: grid; gap: 6px; }
+.c-spoke-card {
+  background: #fff; border: 1px solid #f1f5f9;
+  border-radius: 10px; padding: 10px 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.c-spoke-card.sp-running { border-color: #a5b4fc; box-shadow: 0 0 0 3px rgba(99,102,241,0.07); }
+.c-spoke-card.sp-done { border-color: #86efac; }
+.c-spoke-hd { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+.c-badge { font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 20px; letter-spacing: 0.5px; }
+.c-badge.running { background: #ede9fe; color: #6d28d9; }
+.c-badge.done { background: #f0fdf4; color: #166534; }
+.c-badge.idle { background: #f1f5f9; color: #94a3b8; }
+.c-spoke-name { font-size: 11px; font-weight: 600; color: #334155; }
+.c-spoke-model { margin-left: auto; font-size: 10px; color: #cbd5e1; font-family: 'Geist Mono', monospace; }
+.c-spoke-log { font-size: 10px; color: #94a3b8; font-family: 'Geist Mono', monospace; }
+
+/* Right col C */
+.c-right { padding: 18px; display: flex; flex-direction: column; background: #f8fafc; }
+.c-report-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.c-report-title { font-size: 12px; color: #94a3b8; font-weight: 500; }
+
+/* Spinner C */
+.c-spinner-area {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 18px;
+  background: #fff; border-radius: 12px; border: 1px solid #e2e8f0;
+  min-height: 340px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.c-spinner-circles {
+  position: relative; width: 48px; height: 48px;
+}
+.c-circle-outer {
+  position: absolute; inset: 0; border-radius: 50%;
+  border: 2px solid #e2e8f0;
+}
+.c-circle-inner {
+  position: absolute; inset: 0; border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: #6366f1;
+  animation: spin 0.75s linear infinite;
+}
+.c-spinner-text-area { text-align: center; }
+.c-spinner-label { font-size: 13px; color: #475569; font-weight: 500; }
+.c-spinner-sub { font-size: 11px; color: #94a3b8; margin-top: 4px; }
+.c-skeleton-wrap { width: 100%; display: grid; gap: 8px; padding: 0 20px; }
+.c-skeleton-line {
+  height: 9px; border-radius: 6px;
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 400px 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+/* Loaded state mockup (tab 2) */
+.report-loaded-mock {
+  flex: 1; display: flex; flex-direction: column;
+}
+.report-iframe-mock {
+  flex: 1; background: #fff; border-radius: 10px;
+  border: 1px solid #1e1e3a; overflow: hidden;
+  padding: 18px;
+}
+.ri-h1 { font-size: 16px; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; font-family: 'Inter', sans-serif; }
+.ri-sub { font-size: 11px; color: #888; margin-bottom: 14px; font-family: 'Inter', sans-serif; }
+.ri-section { margin-bottom: 12px; }
+.ri-section-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #6c63ff; margin-bottom: 6px; font-family: 'Inter', sans-serif; }
+.ri-line { height: 8px; border-radius: 4px; background: #f0f0f0; margin-bottom: 5px; }
+.ri-line.short { width: 65%; }
+.ri-line.med { width: 80%; }
+.ri-line.full { width: 100%; }
+
+/* Light version */
+.ri-line-light { height: 8px; border-radius: 4px; background: #f1f5f9; margin-bottom: 5px; }
+.ri-line-light.short { width: 65%; }
+.ri-line-light.med { width: 80%; }
+.ri-line-light.full { width: 100%; }
+
+/* ─── Notes bas de page ──────────────────────────────────── */
+.notes-section {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 20px; padding: 32px; border-top: 1px solid #1e1e1e;
+}
+.note-card { padding: 16px; background: #161616; border-radius: 10px; border: 1px solid #222; }
+.note-title { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+.note-title.a { color: #818cf8; }
+.note-title.b { color: #a78bfa; }
+.note-title.c { color: #6ee7b7; }
+.note-desc { font-size: 11px; color: #555; margin-bottom: 12px; }
+.note-item { font-size: 11px; color: #777; margin-bottom: 5px; padding-left: 14px; position: relative; line-height: 1.5; }
+.note-item::before { content: '·'; position: absolute; left: 4px; color: #444; }
+.note-effort { margin-top: 12px; padding-top: 10px; border-top: 1px solid #222; font-size: 11px; color: #555; }
+.pill { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+.pill.low { background: rgba(74,222,128,0.1); color: #4ade80; }
+.pill.med { background: rgba(251,191,36,0.1); color: #fbbf24; }
+.pill.high { background: rgba(248,113,113,0.1); color: #f87171; }
+</style>
+</head>
+<body>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('loading')">⟳ Report en chargement</div>
+  <div class="tab" onclick="switchTab('loaded')">✓ Report chargé</div>
+  <div style="margin-left:auto;padding:13px 20px;font-size:11px;color:#444;font-family:'Geist Mono',monospace;">Spyke UI · wireframes</div>
+</div>
+
+<!-- ═══ TAB 1 : EN CHARGEMENT ═══ -->
+<div class="option-panel active" id="panel-loading">
+
+  <!-- OPTION A -->
+  <div class="option-section">
+    <div class="option-label">
+      Option A <span class="option-tag pill low">low effort</span>
+      <span style="color:#3a3a5a">— Polish ciblé · thème navy amélioré · Inter + glassmorphism</span>
+    </div>
+    <div class="a-wrap">
+      <div class="a-header">
+        <div>
+          <div class="a-logo">SPYKE</div>
+          <div class="a-sub-text">Competitive Intelligence</div>
+        </div>
+        <div class="a-email-btn">vince@example.com</div>
+        <div class="a-dev-badge">DEV ▾</div>
+      </div>
+      <div class="a-body">
+        <!-- Left -->
+        <div class="a-left">
+          <div class="a-product-row">
+            <div class="a-prod-label">YOUR PRODUCT</div>
+            <div style="flex:1">
+              <div class="a-prod-name">ProTop</div>
+              <div class="a-prod-cat">B2B SaaS Database Monitoring</div>
+            </div>
+            <div class="a-change">Change</div>
+          </div>
+          <div>
+            <div class="a-section-label">SaaS B2B Competitor</div>
+            <div class="a-inp-row">
+              <div class="a-inp">HubSpot</div>
+              <div class="a-analyze-btn">Analyzing…</div>
+            </div>
+            <div class="a-focus-inp">enterprise pricing, onboarding...</div>
+            <div class="a-hint-txt">Sonnet 4.6 · web search · Haiku 4.5 (report)</div>
+          </div>
+          <div class="a-spokes-grid">
+            <div class="a-spoke-card sp-done">
+              <div class="a-spoke-hd">
+                <div class="a-dot done"></div>
+                <div class="a-spoke-name">SPOKE 1 · Scraper</div>
+                <div class="a-spoke-model">sonnet-4.6</div>
+              </div>
+              <div class="a-spoke-log">✓ Done — 4 tiers, 12 features (18s)</div>
+            </div>
+            <div class="a-spoke-card sp-running">
+              <div class="a-spoke-hd">
+                <div class="a-dot running"></div>
+                <div class="a-spoke-name">SPOKE 2 · Sentiment</div>
+                <div class="a-spoke-model">sonnet-4.6</div>
+              </div>
+              <div class="a-spoke-log">> Fetching Capterra reviews...</div>
+            </div>
+            <div class="a-spoke-card sp-running">
+              <div class="a-spoke-hd">
+                <div class="a-dot running"></div>
+                <div class="a-spoke-name">SPOKE 3 · Positioning</div>
+                <div class="a-spoke-model">sonnet-4.6</div>
+              </div>
+              <div class="a-spoke-log">> Analyzing feature gaps...</div>
+            </div>
+            <div class="a-spoke-card">
+              <div class="a-spoke-hd">
+                <div class="a-dot idle"></div>
+                <div class="a-spoke-name" style="color:#444">SPOKE 4 · Report</div>
+                <div class="a-spoke-model">haiku-4.5</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Right — spinner -->
+        <div class="a-right">
+          <div class="a-report-header">
+            <div class="a-report-title">HubSpot · competitive report</div>
+          </div>
+          <div class="a-spinner-area">
+            <div class="a-spinner"></div>
+            <div style="text-align:center">
+              <div class="a-spinner-label">Generating report<span class="a-spinner-cursor">_</span></div>
+              <div style="font-size:10px;color:#444;margin-top:4px;font-family:'Geist Mono',monospace">Waiting for spokes 2 & 3…</div>
+            </div>
+            <div class="a-skeleton-wrap">
+              <div class="a-skeleton-line" style="width:70%"></div>
+              <div class="a-skeleton-line" style="width:90%"></div>
+              <div class="a-skeleton-line" style="width:55%"></div>
+              <div class="a-skeleton-line" style="width:80%;animation-delay:.2s"></div>
+              <div class="a-skeleton-line" style="width:65%;animation-delay:.4s"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTION B -->
+  <div class="option-section">
+    <div class="option-label">
+      Option B <span class="option-tag pill med">medium effort</span>
+      <span style="color:#3a3a5a">— Design system · deep dark · thème Linear / Vercel</span>
+    </div>
+    <div class="b-wrap">
+      <div class="b-header">
+        <div class="b-logo-icon">S</div>
+        <div>
+          <div class="b-logo">Spyke</div>
+          <div class="b-sub-text">Competitive Intelligence</div>
+        </div>
+        <div class="b-email-btn">vince@example.com</div>
+        <div class="b-dev-badge">DEV ▾</div>
+      </div>
+      <div class="b-body">
+        <div class="b-left">
+          <div class="b-product-row">
+            <div class="b-prod-label">YOUR PRODUCT</div>
+            <div style="flex:1">
+              <div class="b-prod-name">ProTop</div>
+              <div class="b-prod-cat">B2B SaaS Database Monitoring</div>
+            </div>
+            <div class="b-change">Change</div>
+          </div>
+          <div>
+            <div class="b-section-label">Competitor</div>
+            <div class="b-inp-row">
+              <div class="b-inp">HubSpot</div>
+              <div class="b-analyze-btn">Analyzing…</div>
+            </div>
+            <div class="b-focus-inp">enterprise pricing, onboarding...</div>
+            <div class="b-hint-txt">Sonnet 4.6 · web search · Haiku 4.5 (report)</div>
+          </div>
+          <div class="b-spokes-grid">
+            <div class="b-spoke-card sp-done">
+              <div class="b-spoke-hd">
+                <div class="b-indicator done"></div>
+                <div class="b-spoke-name">Spoke 1 · Scraper</div>
+                <div class="b-spoke-model">sonnet-4.6</div>
+              </div>
+              <div class="b-spoke-log">✓ Done — 4 tiers, 12 features (18s)</div>
+            </div>
+            <div class="b-spoke-card sp-running">
+              <div class="b-spoke-hd">
+                <div class="b-indicator running"></div>
+                <div class="b-spoke-name">Spoke 2 · Sentiment</div>
+                <div class="b-spoke-model">sonnet-4.6</div>
+              </div>
+              <div class="b-spoke-log">> Fetching Capterra reviews...</div>
+            </div>
+            <div class="b-spoke-card sp-running">
+              <div class="b-spoke-hd">
+                <div class="b-indicator running"></div>
+                <div class="b-spoke-name">Spoke 3 · Positioning</div>
+                <div class="b-spoke-model">sonnet-4.6</div>
+              </div>
+              <div class="b-spoke-log">> Analyzing feature gaps...</div>
+            </div>
+            <div class="b-spoke-card">
+              <div class="b-spoke-hd">
+                <div class="b-indicator idle"></div>
+                <div class="b-spoke-name" style="color:#3f3f46">Spoke 4 · Report</div>
+                <div class="b-spoke-model">haiku-4.5</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Right B -->
+        <div class="b-right">
+          <div class="b-report-header">
+            <div class="b-report-title">HubSpot · competitive report</div>
+          </div>
+          <div class="b-spinner-area">
+            <div class="b-spinner-ring">
+              <div class="b-spinner-icon">⚡</div>
+            </div>
+            <div style="text-align:center">
+              <div class="b-spinner-label">Generating report<span class="b-cursor">_</span></div>
+              <div class="b-spinner-sub">Waiting for spokes 2 & 3…</div>
+            </div>
+            <div class="b-skeleton-wrap">
+              <div class="b-skeleton-line" style="width:72%"></div>
+              <div class="b-skeleton-line" style="width:88%"></div>
+              <div class="b-skeleton-line" style="width:60%"></div>
+              <div class="b-skeleton-line" style="width:78%;animation-delay:.25s"></div>
+              <div class="b-skeleton-line" style="width:50%;animation-delay:.5s"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- OPTION C -->
+  <div class="option-section" style="border-bottom:none;padding-bottom:32px">
+    <div class="option-label">
+      Option C <span class="option-tag pill high">high effort</span>
+      <span style="color:#3a3a5a">— Light mode · Tailwind · composants réutilisables</span>
+    </div>
+    <div class="c-wrap">
+      <div class="c-header">
+        <div class="c-logo-icon">S</div>
+        <div>
+          <div class="c-logo">Spyke</div>
+          <div class="c-sub-text">Competitive Intelligence</div>
+        </div>
+        <div class="c-email-btn">vince@example.com</div>
+        <div class="c-dev-badge">DEV ▾</div>
+      </div>
+      <div class="c-body">
+        <div class="c-left">
+          <div class="c-product-row">
+            <div class="c-prod-label">YOUR PRODUCT</div>
+            <div style="flex:1">
+              <div class="c-prod-name">ProTop</div>
+              <div class="c-prod-cat">B2B SaaS Database Monitoring</div>
+            </div>
+            <div class="c-change">Change</div>
+          </div>
+          <div>
+            <div class="c-section-label">Competitor</div>
+            <div class="c-inp-row">
+              <div class="c-inp">HubSpot</div>
+              <div class="c-analyze-btn">Analyzing…</div>
+            </div>
+            <div class="c-focus-inp">enterprise pricing, onboarding...</div>
+            <div class="c-hint-txt">Sonnet 4.6 · web search · Haiku 4.5 (report)</div>
+          </div>
+          <div class="c-spokes-grid">
+            <div class="c-spoke-card sp-done">
+              <div class="c-spoke-hd">
+                <span class="c-badge done">Done</span>
+                <div class="c-spoke-name">Spoke 1 · Scraper</div>
+                <div class="c-spoke-model">sonnet-4.6</div>
+              </div>
+              <div class="c-spoke-log">✓ Done — 4 tiers, 12 features (18s)</div>
+            </div>
+            <div class="c-spoke-card sp-running">
+              <div class="c-spoke-hd">
+                <span class="c-badge running">Running</span>
+                <div class="c-spoke-name">Spoke 2 · Sentiment</div>
+                <div class="c-spoke-model">sonnet-4.6</div>
+              </div>
+              <div class="c-spoke-log">> Fetching Capterra reviews...</div>
+            </div>
+            <div class="c-spoke-card sp-running">
+              <div class="c-spoke-hd">
+                <span class="c-badge running">Running</span>
+                <div class="c-spoke-name">Spoke 3 · Positioning</div>
+                <div class="c-spoke-model">sonnet-4.6</div>
+              </div>
+              <div class="c-spoke-log">> Analyzing feature gaps...</div>
+            </div>
+            <div class="c-spoke-card">
+              <div class="c-spoke-hd">
+                <span class="c-badge idle">Waiting</span>
+                <div class="c-spoke-name" style="color:#94a3b8">Spoke 4 · Report</div>
+                <div class="c-spoke-model">haiku-4.5</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Right C -->
+        <div class="c-right">
+          <div class="c-report-header">
+            <div class="c-report-title">HubSpot · competitive report</div>
+          </div>
+          <div class="c-spinner-area">
+            <div class="c-spinner-circles">
+              <div class="c-circle-outer"></div>
+              <div class="c-circle-inner"></div>
+            </div>
+            <div class="c-spinner-text-area">
+              <div class="c-spinner-label">Generating report…</div>
+              <div class="c-spinner-sub">Waiting for spokes 2 & 3</div>
+            </div>
+            <div class="c-skeleton-wrap">
+              <div class="c-skeleton-line" style="width:70%"></div>
+              <div class="c-skeleton-line" style="width:88%"></div>
+              <div class="c-skeleton-line" style="width:55%"></div>
+              <div class="c-skeleton-line" style="width:80%;animation-delay:.2s"></div>
+              <div class="c-skeleton-line" style="width:62%;animation-delay:.4s"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TAB 2 : CHARGÉ ═══ -->
+<div class="option-panel" id="panel-loaded">
+
+  <!-- A loaded -->
+  <div class="option-section">
+    <div class="option-label">Option A <span class="option-tag pill low">low effort</span></div>
+    <div class="a-wrap">
+      <div class="a-header">
+        <div><div class="a-logo">SPYKE</div><div class="a-sub-text">Competitive Intelligence</div></div>
+        <div class="a-email-btn">vince@example.com</div>
+        <div class="a-dev-badge">DEV ▾</div>
+      </div>
+      <div class="a-body">
+        <div class="a-left">
+          <div class="a-product-row">
+            <div class="a-prod-label">YOUR PRODUCT</div>
+            <div style="flex:1"><div class="a-prod-name">ProTop</div><div class="a-prod-cat">B2B SaaS Database Monitoring</div></div>
+            <div class="a-change">Change</div>
+          </div>
+          <div>
+            <div class="a-section-label">SaaS B2B Competitor</div>
+            <div class="a-inp-row">
+              <div class="a-inp">HubSpot</div>
+              <div class="a-analyze-btn" style="background:#1e1e3a;color:#555;">▶ Analyze</div>
+            </div>
+          </div>
+          <div class="a-spokes-grid">
+            <div class="a-spoke-card sp-done"><div class="a-spoke-hd"><div class="a-dot done"></div><div class="a-spoke-name">SPOKE 1 · Scraper</div><div class="a-spoke-model">18s</div></div><div class="a-spoke-log">✓ 4 tiers · 12 features</div></div>
+            <div class="a-spoke-card sp-done"><div class="a-spoke-hd"><div class="a-dot done"></div><div class="a-spoke-name">SPOKE 2 · Sentiment</div><div class="a-spoke-model">34s</div></div><div class="a-spoke-log">✓ 4.1/5 · 142 reviews</div></div>
+            <div class="a-spoke-card sp-done"><div class="a-spoke-hd"><div class="a-dot done"></div><div class="a-spoke-name">SPOKE 3 · Positioning</div><div class="a-spoke-model">41s</div></div><div class="a-spoke-log">✓ 6 gaps · SWOT complete</div></div>
+            <div class="a-spoke-card sp-done"><div class="a-spoke-hd"><div class="a-dot done"></div><div class="a-spoke-name">SPOKE 4 · Report</div><div class="a-spoke-model">12s</div></div><div class="a-spoke-log">✓ Report generated</div></div>
+          </div>
+        </div>
+        <div class="a-right">
+          <div class="a-report-header">
+            <div class="a-report-title">HubSpot · competitive report</div>
+            <div class="a-report-date">Apr 9, 2026 · 14:32</div>
+          </div>
+          <div class="report-loaded-mock">
+            <div class="report-iframe-mock" style="background:#fff;border-color:#1e1e3a;">
+              <div class="ri-h1">HubSpot CRM</div>
+              <div class="ri-sub">Competitive analysis vs ProTop · April 2026</div>
+              <div class="ri-section"><div class="ri-section-title">Pricing</div><div class="ri-line full"></div><div class="ri-line med"></div><div class="ri-line short"></div></div>
+              <div class="ri-section"><div class="ri-section-title">Sentiment</div><div class="ri-line full"></div><div class="ri-line med"></div></div>
+              <div class="ri-section"><div class="ri-section-title">SWOT</div><div class="ri-line full"></div><div class="ri-line short"></div><div class="ri-line med"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- B loaded -->
+  <div class="option-section">
+    <div class="option-label">Option B <span class="option-tag pill med">medium effort</span></div>
+    <div class="b-wrap">
+      <div class="b-header">
+        <div class="b-logo-icon">S</div>
+        <div><div class="b-logo">Spyke</div><div class="b-sub-text">Competitive Intelligence</div></div>
+        <div class="b-email-btn">vince@example.com</div>
+        <div class="b-dev-badge">DEV ▾</div>
+      </div>
+      <div class="b-body">
+        <div class="b-left">
+          <div class="b-product-row">
+            <div class="b-prod-label">YOUR PRODUCT</div>
+            <div style="flex:1"><div class="b-prod-name">ProTop</div><div class="b-prod-cat">B2B SaaS Database Monitoring</div></div>
+            <div class="b-change">Change</div>
+          </div>
+          <div>
+            <div class="b-section-label">Competitor</div>
+            <div class="b-inp-row">
+              <div class="b-inp">HubSpot</div>
+              <div class="b-analyze-btn" style="background:rgba(255,255,255,0.06);box-shadow:none;color:#555;">▶ Analyze</div>
+            </div>
+          </div>
+          <div class="b-spokes-grid">
+            <div class="b-spoke-card sp-done"><div class="b-spoke-hd"><div class="b-indicator done"></div><div class="b-spoke-name">Spoke 1 · Scraper</div><div class="b-spoke-model">18s</div></div><div class="b-spoke-log">✓ 4 tiers · 12 features</div></div>
+            <div class="b-spoke-card sp-done"><div class="b-spoke-hd"><div class="b-indicator done"></div><div class="b-spoke-name">Spoke 2 · Sentiment</div><div class="b-spoke-model">34s</div></div><div class="b-spoke-log">✓ 4.1/5 · 142 reviews</div></div>
+            <div class="b-spoke-card sp-done"><div class="b-spoke-hd"><div class="b-indicator done"></div><div class="b-spoke-name">Spoke 3 · Positioning</div><div class="b-spoke-model">41s</div></div><div class="b-spoke-log">✓ 6 gaps · SWOT complete</div></div>
+            <div class="b-spoke-card sp-done"><div class="b-spoke-hd"><div class="b-indicator done"></div><div class="b-spoke-name">Spoke 4 · Report</div><div class="b-spoke-model">12s</div></div><div class="b-spoke-log">✓ Report generated</div></div>
+          </div>
+        </div>
+        <div class="b-right" style="background:rgba(0,0,0,0.15);">
+          <div class="b-report-header">
+            <div class="b-report-title">HubSpot · competitive report</div>
+            <div style="margin-left:auto;font-size:10px;color:#3f3f46;font-family:'Geist Mono',monospace;">Apr 9 · 14:32</div>
+          </div>
+          <div class="report-loaded-mock">
+            <div class="report-iframe-mock" style="background:#fff;border-color:#1a1a2a;">
+              <div class="ri-h1">HubSpot CRM</div>
+              <div class="ri-sub">Competitive analysis vs ProTop · April 2026</div>
+              <div class="ri-section"><div class="ri-section-title" style="color:#7c6af7;">Pricing</div><div class="ri-line full"></div><div class="ri-line med"></div><div class="ri-line short"></div></div>
+              <div class="ri-section"><div class="ri-section-title" style="color:#7c6af7;">Sentiment</div><div class="ri-line full"></div><div class="ri-line med"></div></div>
+              <div class="ri-section"><div class="ri-section-title" style="color:#7c6af7;">SWOT</div><div class="ri-line full"></div><div class="ri-line short"></div><div class="ri-line med"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- C loaded -->
+  <div class="option-section" style="border-bottom:none;padding-bottom:32px">
+    <div class="option-label">Option C <span class="option-tag pill high">high effort</span></div>
+    <div class="c-wrap">
+      <div class="c-header">
+        <div class="c-logo-icon">S</div>
+        <div><div class="c-logo">Spyke</div><div class="c-sub-text">Competitive Intelligence</div></div>
+        <div class="c-email-btn">vince@example.com</div>
+        <div class="c-dev-badge">DEV ▾</div>
+      </div>
+      <div class="c-body">
+        <div class="c-left">
+          <div class="c-product-row">
+            <div class="c-prod-label">YOUR PRODUCT</div>
+            <div style="flex:1"><div class="c-prod-name">ProTop</div><div class="c-prod-cat">B2B SaaS Database Monitoring</div></div>
+            <div class="c-change">Change</div>
+          </div>
+          <div>
+            <div class="c-section-label">Competitor</div>
+            <div class="c-inp-row">
+              <div class="c-inp">HubSpot</div>
+              <div class="c-analyze-btn" style="background:#e2e8f0;box-shadow:none;color:#94a3b8;">▶ Analyze</div>
+            </div>
+          </div>
+          <div class="c-spokes-grid">
+            <div class="c-spoke-card sp-done"><div class="c-spoke-hd"><span class="c-badge done">Done</span><div class="c-spoke-name">Spoke 1 · Scraper</div><div class="c-spoke-model">18s</div></div><div class="c-spoke-log">✓ 4 tiers · 12 features</div></div>
+            <div class="c-spoke-card sp-done"><div class="c-spoke-hd"><span class="c-badge done">Done</span><div class="c-spoke-name">Spoke 2 · Sentiment</div><div class="c-spoke-model">34s</div></div><div class="c-spoke-log">✓ 4.1/5 · 142 reviews</div></div>
+            <div class="c-spoke-card sp-done"><div class="c-spoke-hd"><span class="c-badge done">Done</span><div class="c-spoke-name">Spoke 3 · Positioning</div><div class="c-spoke-model">41s</div></div><div class="c-spoke-log">✓ 6 gaps · SWOT complete</div></div>
+            <div class="c-spoke-card sp-done"><div class="c-spoke-hd"><span class="c-badge done">Done</span><div class="c-spoke-name">Spoke 4 · Report</div><div class="c-spoke-model">12s</div></div><div class="c-spoke-log">✓ Report generated</div></div>
+          </div>
+        </div>
+        <div class="c-right">
+          <div class="c-report-header">
+            <div class="c-report-title">HubSpot · competitive report</div>
+            <div style="margin-left:auto;font-size:10px;color:#94a3b8;font-family:'Geist Mono',monospace;">Apr 9 · 14:32</div>
+          </div>
+          <div class="report-loaded-mock">
+            <div class="report-iframe-mock" style="background:#fff;border-color:#e2e8f0;">
+              <div class="ri-h1" style="color:#0f172a;">HubSpot CRM</div>
+              <div class="ri-sub">Competitive analysis vs ProTop · April 2026</div>
+              <div class="ri-section"><div class="ri-section-title" style="color:#6366f1;">Pricing</div><div class="ri-line-light full"></div><div class="ri-line-light med"></div><div class="ri-line-light short"></div></div>
+              <div class="ri-section"><div class="ri-section-title" style="color:#6366f1;">Sentiment</div><div class="ri-line-light full"></div><div class="ri-line-light med"></div></div>
+              <div class="ri-section"><div class="ri-section-title" style="color:#6366f1;">SWOT</div><div class="ri-line-light full"></div><div class="ri-line-light short"></div><div class="ri-line-light med"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', ['loading','loaded'][i] === name);
+  });
+  document.querySelectorAll('.option-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+}
+</script>
+</body>
+</html>
