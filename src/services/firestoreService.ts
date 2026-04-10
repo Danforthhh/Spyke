@@ -86,7 +86,9 @@ export async function listSharedProducts(): Promise<SharedProduct[]> {
       category: data.category,
       tagline:     typeof data.tagline     === 'string' ? data.tagline     : '',
       positioning: typeof data.positioning === 'string' ? data.positioning : '',
-      features:      Array.isArray(data.features)      ? data.features      as string[]                  : [],
+      features:      Array.isArray(data.features)      && data.features.every((f: unknown) => typeof f === 'string')
+                       ? data.features as string[]
+                       : [],
       pricing_tiers: Array.isArray(data.pricing_tiers) ? data.pricing_tiers as MyProduct['pricing_tiers'] : [],
       createdBy: typeof data.createdBy === 'string' ? data.createdBy : '',
       createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toMillis() : Date.now(),

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { signOut, reauthenticateWithCredential, EmailAuthProvider, deleteUser } from 'firebase/auth'
+import { FirebaseError } from 'firebase/app'
 import { auth } from '../services/firebase'
 import { encryptApiKey, clearPersistedPassword } from '../services/cryptoService'
 import { saveEncryptedKey, removeEncryptedKey } from '../services/firestoreService'
@@ -65,7 +66,7 @@ export default function AccountModal({ session, sessionPassword, hasKey, onKeyUp
       clearPersistedPassword()
       onLogout()
     } catch (err: unknown) {
-      const code = (err as { code?: string }).code ?? ''
+      const code = err instanceof FirebaseError ? err.code : ''
       if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
         setDeleteError('Re-authentication failed. Please sign out and sign back in before deleting.')
       } else {

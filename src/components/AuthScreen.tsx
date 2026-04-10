@@ -1,8 +1,6 @@
 import { useState } from 'react'
-import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-} from 'firebase/auth'
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
+import { FirebaseError } from 'firebase/app'
 import { auth } from '../services/firebase'
 import { persistPassword } from '../services/cryptoService'
 
@@ -33,7 +31,7 @@ export default function AuthScreen({ onLogin }: Props) {
       persistPassword(password)
       onLogin(password)
     } catch (err: unknown) {
-      const code = (err as { code?: string }).code ?? ''
+      const code = err instanceof FirebaseError ? err.code : ''
       if (code === 'auth/invalid-credential' || code === 'auth/wrong-password') {
         setError('Wrong email or password.')
       } else if (code === 'auth/email-already-in-use') {
