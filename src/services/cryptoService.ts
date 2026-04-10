@@ -11,7 +11,7 @@
 
 import type { EncryptedKeyBundle } from '../types'
 
-const PBKDF2_ITERATIONS = 100_000
+const PBKDF2_ITERATIONS = 600_000
 const SESSION_PW_KEY    = 'spyke_session_pw'
 
 // ── Hex helpers ────────────────────────────────────────────────────────────

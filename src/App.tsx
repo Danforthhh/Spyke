@@ -177,7 +177,7 @@ export default function App() {
   const handleSetFavorite = async (productId: string | null) => {
     if (!session) return
     setFavoriteProductId(productId)
-    await saveFavoriteProductId(session.uid, productId).catch(() => {})
+    await saveFavoriteProductId(session.uid, productId).catch(err => console.error('Failed to save favorite:', err))
   }
 
   const handleAddProduct = async (product: MyProduct) => {
@@ -306,7 +306,7 @@ export default function App() {
         if (session) {
           saveReport(session.uid, name, html)
             .then(id => setSavedReports(prev => [{ id, competitor: name, html, createdAt: now }, ...prev]))
-            .catch(() => {})
+            .catch(err => console.error('Failed to save report:', err))
         }
       } catch (e) {
         updateSpoke('report', { status: 'error' })
@@ -456,7 +456,7 @@ export default function App() {
         if (session) {
           saveReport(session.uid, label, html)
             .then(id => setSavedReports(prev => [{ id, competitor: label, html, createdAt: now }, ...prev]))
-            .catch(() => {})
+            .catch(err => console.error('Failed to save comparison report:', err))
         }
       } catch (e) {
         setCompareReportSpoke(prev => ({ ...prev, status: 'error' }))
@@ -767,7 +767,7 @@ export default function App() {
                             if (!session) return
                             deleteReport(session.uid, r.id)
                               .then(() => setSavedReports(prev => prev.filter(x => x.id !== r.id)))
-                              .catch(() => {})
+                              .catch(err => console.error('Failed to delete report:', err))
                           }}
                           className="text-slate-300 dark:text-slate-600 hover:text-red-400 dark:hover:text-red-500 cursor-pointer bg-transparent border-0 text-base leading-none flex-shrink-0 transition-colors"
                         >

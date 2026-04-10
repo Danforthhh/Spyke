@@ -18,6 +18,7 @@ interface Props {
 export default function AccountModal({ session, sessionPassword, hasKey, onKeyUpdated, onLogout, onClose }: Props) {
   const [editing,       setEditing]       = useState(false)
   const [newKey,        setNewKey]        = useState('')
+  const [showKey,       setShowKey]       = useState(false)
   const [keyError,      setKeyError]      = useState('')
   const [savingKey,     setSavingKey]     = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -27,6 +28,10 @@ export default function AccountModal({ session, sessionPassword, hasKey, onKeyUp
   const handleSaveKey = async () => {
     const trimmed = newKey.trim()
     if (!trimmed) return
+    if (!trimmed.startsWith('sk-ant-')) {
+      setKeyError('Key must start with sk-ant-')
+      return
+    }
     setSavingKey(true)
     setKeyError('')
     try {
@@ -35,6 +40,7 @@ export default function AccountModal({ session, sessionPassword, hasKey, onKeyUp
       onKeyUpdated(trimmed)
       setEditing(false)
       setNewKey('')
+      setShowKey(false)
     } catch {
       setKeyError('Failed to save key. Please try again.')
     } finally {
@@ -43,8 +49,12 @@ export default function AccountModal({ session, sessionPassword, hasKey, onKeyUp
   }
 
   const handleRemoveKey = async () => {
-    await removeEncryptedKey(session.uid)
-    onKeyUpdated(null)
+    try {
+      await removeEncryptedKey(session.uid)
+      onKeyUpdated(null)
+    } catch {
+      // Removal failed — do not update UI state so user can retry
+    }
   }
 
   const handleLogout = async () => {
@@ -61,8 +71,10 @@ export default function AccountModal({ session, sessionPassword, hasKey, onKeyUp
       if (!currentUser) throw new Error('No user')
       const credential = EmailAuthProvider.credential(session.email, sessionPassword)
       await reauthenticateWithCredential(currentUser, credential)
-      await removeEncryptedKey(session.uid)
+      // Delete Auth account first — if this succeeds, the user is gone regardless of cleanup
       await deleteUser(currentUser)
+      // Best-effort Firestore cleanup (non-blocking — orphaned doc is unreachable without the uid)
+      await removeEncryptedKey(session.uid).catch(() => {})
       clearPersistedPassword()
       onLogout()
     } catch (err: unknown) {
@@ -121,14 +133,23 @@ export default function AccountModal({ session, sessionPassword, hasKey, onKeyUp
               </div>
             ) : (
               <div className="space-y-2">
-                <input
-                  type="password"
-                  placeholder="sk-ant-..."
-                  value={newKey}
-                  onChange={e => setNewKey(e.target.value)}
-                  autoFocus
-                  className={inputCls}
-                />
+                <div className="relative">
+                  <input
+                    type={showKey ? 'text' : 'password'}
+                    placeholder="sk-ant-..."
+                    value={newKey}
+                    onChange={e => setNewKey(e.target.value)}
+                    autoFocus
+                    className={inputCls + ' pr-16'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowKey(s => !s)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer bg-transparent border-0 font-medium uppercase tracking-wide"
+                  >
+                    {showKey ? 'Hide' : 'Show'}
+                  </button>
+                </div>
                 {keyError && <p className="text-xs text-red-500 dark:text-red-400">{keyError}</p>}
                 <div className="flex gap-2">
                   <button

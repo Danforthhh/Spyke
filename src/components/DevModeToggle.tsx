@@ -37,6 +37,7 @@ export default function DevModeToggle({ devMode, hasApiKey, onToggle, onSaveKey 
   const [offline,     setOffline]     = useState(false)
   const [showKeyForm, setShowKeyForm] = useState(false)
   const [keyInput,    setKeyInput]    = useState('')
+  const [showKey,     setShowKey]     = useState(false)
   const [saving,      setSaving]      = useState(false)
   const [saveError,   setSaveError]   = useState('')
   const containerRef = useRef<HTMLDivElement>(null)
@@ -87,11 +88,16 @@ export default function DevModeToggle({ devMode, hasApiKey, onToggle, onSaveKey 
   const handleSave = async () => {
     const trimmed = keyInput.trim()
     if (!trimmed || saving) return
+    if (!trimmed.startsWith('sk-ant-')) {
+      setSaveError('Key must start with sk-ant-')
+      return
+    }
     setSaving(true)
     setSaveError('')
     try {
       await onSaveKey(trimmed)
       setKeyInput('')
+      setShowKey(false)
       setShowKeyForm(false)
       onToggle(false) // switch to PROD after key is saved
     } catch {
@@ -150,16 +156,25 @@ export default function DevModeToggle({ devMode, hasApiKey, onToggle, onSaveKey 
           <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 leading-relaxed">
             PROD mode uses your Anthropic API key.
           </p>
-          <input
-            type="password"
-            placeholder="sk-ant-..."
-            value={keyInput}
-            onChange={e => setKeyInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && !saving && handleSave()}
-            autoFocus
-            autoComplete="off"
-            className="w-full px-3 py-2 mb-2 text-xs font-mono bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/50 transition-all"
-          />
+          <div className="relative mb-2">
+            <input
+              type={showKey ? 'text' : 'password'}
+              placeholder="sk-ant-..."
+              value={keyInput}
+              onChange={e => setKeyInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && !saving && handleSave()}
+              autoFocus
+              autoComplete="off"
+              className="w-full px-3 py-2 pr-12 text-xs font-mono bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/50 transition-all"
+            />
+            <button
+              type="button"
+              onClick={() => setShowKey(s => !s)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer bg-transparent border-0 font-medium uppercase tracking-wide"
+            >
+              {showKey ? 'Hide' : 'Show'}
+            </button>
+          </div>
           <div className="flex gap-2">
             <button
               onClick={handleSave}
