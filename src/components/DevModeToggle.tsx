@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 const PROXY_URL = 'https://dev-proxy.vin-bories.workers.dev'
 const POLL_MS   = 5000
@@ -12,8 +12,10 @@ interface ProxyStats {
 }
 
 interface Props {
-  hasApiKey: boolean
-  onOpenAccount: () => void
+  devMode:    boolean
+  hasApiKey:  boolean
+  onToggle:   (next: boolean) => void
+  onSaveKey:  (key: string) => Promise<void>
 }
 
 async function fetchStats(): Promise<ProxyStats | null> {
@@ -27,15 +29,17 @@ async function fetchStats(): Promise<ProxyStats | null> {
 }
 
 function formatResetDate(iso: string): string {
-  const d = new Date(iso)
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-export default function DevModeToggle({ hasApiKey, onOpenAccount }: Props) {
-  const [devMode,   setDevMode]   = useState(() => localStorage.getItem('devMode') === 'true')
-  const [stats,     setStats]     = useState<ProxyStats | null>(null)
-  const [offline,   setOffline]   = useState(false)
-  const [showNoKey, setShowNoKey] = useState(false)
+export default function DevModeToggle({ devMode, hasApiKey, onToggle, onSaveKey }: Props) {
+  const [stats,       setStats]       = useState<ProxyStats | null>(null)
+  const [offline,     setOffline]     = useState(false)
+  const [showKeyForm, setShowKeyForm] = useState(false)
+  const [keyInput,    setKeyInput]    = useState('')
+  const [saving,      setSaving]      = useState(false)
+  const [saveError,   setSaveError]   = useState('')
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const refreshStats = useCallback(async () => {
     if (!devMode) return
@@ -51,72 +55,151 @@ export default function DevModeToggle({ hasApiKey, onOpenAccount }: Props) {
     return () => clearInterval(id)
   }, [devMode, refreshStats])
 
+  // Close key form when clicking outside
   useEffect(() => {
-    if (devMode || hasApiKey) setShowNoKey(false)
-  }, [devMode, hasApiKey])
+    if (!showKeyForm) return
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setShowKeyForm(false)
+        setKeyInput('')
+        setSaveError('')
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [showKeyForm])
 
-  const toggle = async () => {
-    const next = !devMode
-    if (next === false && !hasApiKey) { setShowNoKey(true); return }
-    setShowNoKey(false)
-    localStorage.setItem('devMode', String(next))
-    setDevMode(next)
-    if (next) {
-      const data = await fetchStats()
-      if (data) { setStats(data); setOffline(false) }
-      else       { setStats(null); setOffline(true) }
-    } else {
-      setStats(null); setOffline(false)
+  // Dismiss key form once a key is saved
+  useEffect(() => {
+    if (hasApiKey) setShowKeyForm(false)
+  }, [hasApiKey])
+
+  const handleToggle = () => {
+    if (devMode && !hasApiKey) {
+      // Switching from DEV to PROD but no key — show inline form instead
+      setShowKeyForm(s => !s)
+      return
+    }
+    setShowKeyForm(false)
+    onToggle(!devMode)
+  }
+
+  const handleSave = async () => {
+    const trimmed = keyInput.trim()
+    if (!trimmed || saving) return
+    setSaving(true)
+    setSaveError('')
+    try {
+      await onSaveKey(trimmed)
+      setKeyInput('')
+      setShowKeyForm(false)
+      onToggle(false) // switch to PROD after key is saved
+    } catch {
+      setSaveError('Failed to save key. Please try again.')
+    } finally {
+      setSaving(false)
     }
   }
 
+  // ── Pill appearance ────────────────────────────────────────────────────────
   const searches = stats ? stats.tavilySearches + stats.ddgSearches : 0
 
-  let label: string
-  let pillCls: string
+  let pillBg:    string
+  let pillLabel: string
+  let tooltip:   string
 
   if (!devMode) {
-    label   = '☁ PROD'
-    pillCls = 'bg-blue-600 hover:bg-blue-700 text-white'
+    pillBg    = '#2563eb'
+    pillLabel = 'PROD'
+    tooltip   = 'Production — Anthropic API (your key)\nClick to switch to free DEV mode'
   } else if (offline) {
-    label   = '⚠ Proxy offline'
-    pillCls = 'bg-red-500 hover:bg-red-600 text-white'
+    pillBg    = '#dc2626'
+    pillLabel = '⚠ DEV'
+    tooltip   = 'DEV mode — Cloudflare Worker unreachable\nCheck: dev-proxy.vin-bories.workers.dev/stats\nClick to switch to PROD'
   } else if (stats) {
     const reset = formatResetDate(stats.resetDate)
-    label   = `🔧 DEV · ${searches}/${stats.limit} · resets ${reset}`
-    pillCls = 'bg-emerald-600 hover:bg-emerald-700 text-white'
+    pillBg    = '#15803d'
+    pillLabel = 'DEV'
+    tooltip   = `DEV mode — Groq + Tavily (free)\n${searches}/${stats.limit} searches used · resets ${reset}\n${stats.remaining} Tavily remaining\nClick to switch to PROD`
   } else {
-    label   = '🔧 DEV'
-    pillCls = 'bg-emerald-600 hover:bg-emerald-700 text-white'
+    pillBg    = '#15803d'
+    pillLabel = 'DEV'
+    tooltip   = 'DEV mode — Groq + Tavily (free)\nClick to switch to PROD'
   }
 
-  const title = !devMode
-    ? 'Production mode — direct Anthropic API (your key)\nClick to switch to free DEV mode'
-    : offline
-      ? `DEV mode active but Cloudflare Worker is unreachable.\nCheck: ${PROXY_URL}/stats`
-      : stats
-        ? `DEV mode — free Groq + Tavily\n${stats.tavilySearches} Tavily / ${stats.ddgSearches} DDG searches this month\n${stats.remaining} Tavily remaining · resets ${formatResetDate(stats.resetDate)}\nClick to switch to PROD`
-        : 'DEV mode — free Groq + Tavily\nClick to switch to PROD'
-
   return (
-    <div className="relative flex flex-col items-end gap-1.5">
+    <div ref={containerRef} style={{ position: 'relative' }}>
       <button
-        onClick={toggle}
-        title={title}
-        className={`px-3 py-1 rounded-full text-xs font-mono font-semibold shadow-md transition-colors cursor-pointer ${pillCls}`}
+        onClick={handleToggle}
+        title={tooltip}
+        style={{
+          padding: '5px 14px', background: pillBg, border: 'none',
+          borderRadius: 20, color: '#fff', fontSize: 12,
+          fontFamily: 'monospace', fontWeight: 600, letterSpacing: 0.5,
+          cursor: 'pointer', transition: 'filter 0.15s',
+          lineHeight: 1.4,
+        }}
+        onMouseEnter={e => (e.currentTarget.style.filter = 'brightness(1.2)')}
+        onMouseLeave={e => (e.currentTarget.style.filter = 'brightness(1)')}
       >
-        {label}
+        {pillLabel}
       </button>
 
-      {showNoKey && (
-        <div className="absolute top-full mt-1.5 right-0 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-600 dark:text-slate-300 max-w-[220px] text-right leading-relaxed shadow-lg shadow-slate-200/60 dark:shadow-slate-900/60 z-50">
-          PROD requires an API key.{' '}
-          <button
-            onClick={() => { setShowNoKey(false); onOpenAccount() }}
-            className="text-indigo-500 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 cursor-pointer bg-transparent border-0 font-medium"
-          >
-            Add one in Settings
-          </button>
+      {showKeyForm && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 10px)', right: 0,
+          background: '#12122a', border: '1px solid #2a2a4a', borderRadius: 10,
+          padding: '16px', width: 300,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+          zIndex: 200,
+        }}>
+          <div style={{ fontSize: 12, color: '#888', marginBottom: 10, lineHeight: 1.6 }}>
+            PROD mode uses your Anthropic API key.
+          </div>
+          <input
+            type="password"
+            placeholder="sk-ant-..."
+            value={keyInput}
+            onChange={e => setKeyInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && !saving && handleSave()}
+            autoFocus
+            autoComplete="off"
+            style={{
+              width: '100%', padding: '8px 10px', marginBottom: 8,
+              background: '#0a0a1a', border: '1px solid #2a2a4a',
+              borderRadius: 6, color: '#e0e0e0', fontSize: 12,
+              outline: 'none', fontFamily: 'monospace', boxSizing: 'border-box',
+            }}
+          />
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button
+              onClick={handleSave}
+              disabled={saving || !keyInput.trim()}
+              style={{
+                flex: 1, padding: '7px 0',
+                background: saving || !keyInput.trim() ? '#1a1a3a' : '#6c63ff',
+                border: 'none', borderRadius: 6,
+                color: saving || !keyInput.trim() ? '#555' : '#fff',
+                fontSize: 12, fontWeight: 600,
+                cursor: saving || !keyInput.trim() ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {saving ? 'Saving…' : 'Save & switch to PROD'}
+            </button>
+            <button
+              onClick={() => { setShowKeyForm(false); setKeyInput(''); setSaveError('') }}
+              style={{
+                padding: '7px 12px', background: 'none',
+                border: '1px solid #2a2a4a', borderRadius: 6,
+                color: '#888', fontSize: 12, cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+          {saveError && (
+            <div style={{ color: '#f44336', fontSize: 11, marginTop: 8 }}>{saveError}</div>
+          )}
         </div>
       )}
     </div>

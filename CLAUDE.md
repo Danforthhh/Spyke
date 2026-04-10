@@ -231,3 +231,10 @@ match /products/{productId} {
   allow update, delete: if request.auth.uid == resource.data.createdBy;
 }
 ```
+
+## Logo + mode toggle redesign — 2026-04-10
+**Context:** Original favicon was two concentric circles (generic). DevModeToggle was a `position: fixed` pill in the top-right corner; switching to PROD without an API key showed a detached tooltip that required navigating to AccountModal separately.
+
+**Logo chosen:** Crosshair/target SVG — outer ring + four cross arms + center dot, all in `#6c63ff` on `#0f0f23`. Recognizable at 32px favicon size, directly communicates "competitive intelligence / precision targeting".
+
+**Toggle chosen:** Moved into the header bar, rendered inline between the logo and account button. Converted to a controlled component — App.tsx owns `devMode` state, passes it down as a prop. `handleToggleMode` writes to `localStorage` and sets React state directly (removes the previous 500ms polling interval). When no API key exists and user clicks PROD, an inline popover card opens below the pill with a password input and "Save & switch to PROD" button — the key is encrypted and saved in one gesture without opening AccountModal. `handleSaveKeyInline` in App.tsx handles encryption + Firestore write + state update. DevModeToggle no longer appears on auth/unlock screens (mode only matters in the main app).

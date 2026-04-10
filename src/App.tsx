@@ -13,8 +13,8 @@ import { runSentiment } from './services/spokeSentiment'
 import { runPositioning } from './services/spokePositioning'
 import { runReport } from './services/spokeReport'
 import { useAuth } from './hooks/useAuth'
-import { getUserSettings, saveReport, listReports, deleteReport, listSharedProducts, addSharedProduct, getFavoriteProductId, setFavoriteProductId as saveFavoriteProductId, seedSharedProducts } from './services/firestoreService'
-import { decryptApiKey, getPersistedPassword } from './services/cryptoService'
+import { getUserSettings, saveReport, listReports, deleteReport, saveEncryptedKey, listSharedProducts, addSharedProduct, getFavoriteProductId, setFavoriteProductId as saveFavoriteProductId, seedSharedProducts } from './services/firestoreService'
+import { decryptApiKey, getPersistedPassword, encryptApiKey } from './services/cryptoService'
 
 const INITIAL_SPOKES: SpokesState = {
   scraper:    { status: 'idle', log: [] },
@@ -78,13 +78,17 @@ export default function App() {
   const [showHistory,   setShowHistory]   = useState(false)
   const [reportDate,    setReportDate]    = useState<number | undefined>(undefined)
 
-  // Stay in sync when DevModeToggle writes to localStorage
-  useEffect(() => {
-    const onStorage = () => setDevMode(localStorage.getItem('devMode') === 'true')
-    window.addEventListener('storage', onStorage)
-    const id = setInterval(onStorage, 500)
-    return () => { window.removeEventListener('storage', onStorage); clearInterval(id) }
+  const handleToggleMode = useCallback((next: boolean) => {
+    localStorage.setItem('devMode', String(next))
+    setDevMode(next)
   }, [])
+
+  const handleSaveKeyInline = useCallback(async (key: string) => {
+    if (!session || !sessionPassword) throw new Error('Not authenticated')
+    const bundle = await encryptApiKey(key, sessionPassword)
+    await saveEncryptedKey(session.uid, bundle)
+    setApiKey(key)
+  }, [session, sessionPassword])
 
   // Auth state changes
   useEffect(() => {
@@ -400,7 +404,12 @@ export default function App() {
         </div>
 
         {/* DEV/PROD pill — inline, no overlap */}
-        <DevModeToggle hasApiKey={!!apiKey} onOpenAccount={() => setShowAccount(true)} />
+        <DevModeToggle
+          devMode={devMode}
+          hasApiKey={!!apiKey}
+          onToggle={handleToggleMode}
+          onSaveKey={handleSaveKeyInline}
+        />
 
         <div className="ml-auto flex items-center gap-2">
           {/* Theme toggle */}
