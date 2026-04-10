@@ -86,11 +86,11 @@ export default function App() {
           const decrypted = await decryptApiKey(settings, pw)
           if (decrypted) setApiKey(decrypted)
         }
-      })
+      }).catch(err => console.warn('Failed to load user settings:', err))
     } else {
       getUserSettings(user.uid).then(settings => {
         if (settings?.encryptedKey) setShowUnlock(true)
-      })
+      }).catch(err => console.warn('Failed to load user settings:', err))
     }
 
     listReports(user.uid).then(setSavedReports).catch(err => console.warn('Failed to load reports:', err))
@@ -185,6 +185,7 @@ export default function App() {
   const handleAnalyze = async () => {
     if (!competitor.trim() || running) return
     setRunning(true)
+    try {
     const productSnapshot: MyProduct = JSON.parse(JSON.stringify(myProduct))
     setSpokes(INITIAL_SPOKES)
     setReportHtml('')
@@ -272,9 +273,12 @@ export default function App() {
     } catch (e) {
       updateSpoke('report', { status: 'error' })
       addLog('report', `Error: ${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setStreaming(false)
     }
-    setStreaming(false)
-    setRunning(false)
+    } finally {
+      setRunning(false)
+    }
   }
 
   const handleDeepAnalysis = async () => {
@@ -422,6 +426,7 @@ export default function App() {
                   onChange={e => setCompetitor(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleAnalyze()}
                   placeholder="HubSpot, Salesforce…"
+                  maxLength={200}
                   disabled={running}
                   className="flex-1 px-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg text-slate-900 placeholder:text-slate-400 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all disabled:opacity-50"
                 />

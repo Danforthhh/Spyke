@@ -13,7 +13,9 @@ export interface UserSettings {
 export async function getUserSettings(uid: string): Promise<UserSettings | null> {
   const snap = await getDoc(doc(db, 'users', uid, 'settings', 'apiKey'))
   if (!snap.exists()) return null
-  return snap.data() as UserSettings
+  const data = snap.data()
+  if (typeof data.encryptedKey !== 'string' || typeof data.keySalt !== 'string' || typeof data.keyIv !== 'string') return null
+  return { encryptedKey: data.encryptedKey, keySalt: data.keySalt, keyIv: data.keyIv }
 }
 
 export async function saveEncryptedKey(uid: string, bundle: EncryptedKeyBundle): Promise<void> {
@@ -48,14 +50,15 @@ export async function saveReport(uid: string, competitor: string, html: string):
 export async function listReports(uid: string): Promise<SavedReport[]> {
   const q = query(collection(db, 'users', uid, 'reports'), orderBy('createdAt', 'desc'))
   const snap = await getDocs(q)
-  return snap.docs.map(d => {
+  return snap.docs.flatMap(d => {
     const data = d.data()
-    return {
+    if (typeof data.competitor !== 'string' || typeof data.html !== 'string') return []
+    return [{
       id: d.id,
-      competitor: data.competitor as string,
-      html: data.html as string,
-      createdAt: (data.createdAt as Timestamp)?.toMillis() ?? Date.now(),
-    }
+      competitor: data.competitor,
+      html: data.html,
+      createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toMillis() : Date.now(),
+    }]
   })
 }
 
@@ -74,19 +77,20 @@ export async function deleteReport(uid: string, reportId: string): Promise<void>
 export async function listSharedProducts(): Promise<SharedProduct[]> {
   const q = query(collection(db, 'products'), orderBy('name', 'asc'))
   const snap = await getDocs(q)
-  return snap.docs.map(d => {
+  return snap.docs.flatMap(d => {
     const data = d.data()
-    return {
+    if (typeof data.name !== 'string' || typeof data.category !== 'string') return []
+    return [{
       id: d.id,
-      name: data.name as string,
-      category: data.category as string,
-      tagline: data.tagline as string,
-      positioning: data.positioning as string,
-      features: data.features as string[],
-      pricing_tiers: data.pricing_tiers as MyProduct['pricing_tiers'],
-      createdBy: data.createdBy as string,
-      createdAt: (data.createdAt as Timestamp)?.toMillis() ?? Date.now(),
-    }
+      name: data.name,
+      category: data.category,
+      tagline:     typeof data.tagline     === 'string' ? data.tagline     : '',
+      positioning: typeof data.positioning === 'string' ? data.positioning : '',
+      features:      Array.isArray(data.features)      ? data.features      as string[]                  : [],
+      pricing_tiers: Array.isArray(data.pricing_tiers) ? data.pricing_tiers as MyProduct['pricing_tiers'] : [],
+      createdBy: typeof data.createdBy === 'string' ? data.createdBy : '',
+      createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toMillis() : Date.now(),
+    }]
   })
 }
 
@@ -108,7 +112,8 @@ export async function addSharedProduct(uid: string, product: MyProduct): Promise
 export async function getFavoriteProductId(uid: string): Promise<string | null> {
   const snap = await getDoc(doc(db, 'users', uid, 'settings', 'preferences'))
   if (!snap.exists()) return null
-  return (snap.data().favoriteProductId as string) ?? null
+  const val = snap.data().favoriteProductId
+  return typeof val === 'string' ? val : null
 }
 
 export async function setFavoriteProductId(uid: string, productId: string | null): Promise<void> {
