@@ -8,8 +8,9 @@ import AccountModal from './components/AccountModal'
 import UnlockModal from './components/UnlockModal'
 import DevModeToggle from './components/DevModeToggle'
 import ProductPicker from './components/ProductPicker'
-import type { SpokesState, SpokeState, ScraperData, SentimentData, PositioningData, MyProduct, Session, SavedReport, SharedProduct, CompetitorAnalysis } from './types'
+import type { SpokesState, SpokeState, ScraperData, SentimentData, PositioningData, MyProduct, Session, SavedReport, SharedProduct, CompetitorAnalysis, CustomerDataContext } from './types'
 import { DEFAULT_MY_PRODUCT } from './types'
+import { runIntake } from './services/intakeService'
 import { runScraper } from './services/spokeScraper'
 import { runSentiment } from './services/spokeSentiment'
 import { runPositioning } from './services/spokePositioning'
@@ -90,6 +91,12 @@ export default function App() {
   const [savedReports,  setSavedReports]  = useState<SavedReport[]>([])
   const [showHistory,   setShowHistory]   = useState(false)
   const [reportDate,    setReportDate]    = useState<number | undefined>(undefined)
+
+  // ── Customer data upload ─────────────────────────────────────────────────
+  const [uploadedFile,   setUploadedFile]   = useState<File | null>(null)
+  const [customerData,   setCustomerData]   = useState<CustomerDataContext | null>(null)
+  const [intakeRunning,  setIntakeRunning]  = useState(false)
+  const [intakeLog,      setIntakeLog]      = useState<string[]>([])
 
   const handleToggleMode = useCallback((next: boolean) => {
     localStorage.setItem('devMode', String(next))
@@ -221,6 +228,31 @@ export default function App() {
     return 'Preparing research spokes…'
   })()
 
+  // ── Customer data helpers ────────────────────────────────────────────────
+  const readFile = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = e => resolve(e.target?.result as string)
+      reader.onerror = reject
+      reader.readAsText(file)
+    })
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadedFile(file)
+    setCustomerData(null)
+    setIntakeLog([])
+    // Reset input so the same file can be re-selected if needed
+    e.target.value = ''
+  }
+
+  const handleRemoveFile = () => {
+    setUploadedFile(null)
+    setCustomerData(null)
+    setIntakeLog([])
+  }
+
   // ── Analysis ─────────────────────────────────────────────────────────────
   const handleAnalyze = async (overrideCompetitor?: string) => {
     const name = (overrideCompetitor ?? competitor).trim()
@@ -234,6 +266,28 @@ export default function App() {
       setReportHtml('')
       setReportDate(undefined)
       setLastResults(null)
+
+      // Run intake pass if a file is uploaded and not yet processed
+      let customerDataSnapshot = customerData
+      if (uploadedFile && !customerData) {
+        setIntakeRunning(true)
+        setIntakeLog([])
+        try {
+          const content = await readFile(uploadedFile)
+          customerDataSnapshot = await runIntake(
+            content,
+            uploadedFile.name,
+            name,
+            msg => setIntakeLog(prev => [...prev, msg]),
+            apiKey,
+          )
+          setCustomerData(customerDataSnapshot)
+        } catch (err) {
+          setIntakeLog(prev => [...prev, `⚠ Intake failed: ${err instanceof Error ? err.message : String(err)}`])
+        } finally {
+          setIntakeRunning(false)
+        }
+      }
 
       const TIMEOUT = 150_000
       const errMsg  = (r: unknown) => r instanceof Error ? r.message : String(r)
@@ -299,7 +353,7 @@ export default function App() {
       setStreaming(true)
       let html = ''
       try {
-        for await (const chunk of runReport(name, scraper, sentiment, positioning, productSnapshot, false, key, focusSnapshot)) {
+        for await (const chunk of runReport(name, scraper, sentiment, positioning, productSnapshot, false, key, focusSnapshot, customerDataSnapshot ?? undefined)) {
           html += chunk
           setReportHtml(html)
         }
@@ -619,6 +673,44 @@ export default function App() {
                   Change
                 </button>
               </div>
+            </div>
+
+            {/* Customer data upload */}
+            <div>
+              <div className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">Customer data <span className="font-normal normal-case text-slate-300 dark:text-slate-600">(optional)</span></div>
+              {!uploadedFile ? (
+                <label className="flex items-center gap-2.5 p-3 bg-slate-50 dark:bg-slate-800 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-700 hover:bg-indigo-50/30 dark:hover:bg-indigo-950/20 transition-colors group">
+                  <span className="text-slate-400 dark:text-slate-500 group-hover:text-indigo-400 transition-colors text-base">↑</span>
+                  <span className="text-sm text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors">Upload CRM export, win/loss data…</span>
+                  <span className="ml-auto text-xs text-slate-300 dark:text-slate-600">.csv .txt</span>
+                  <input
+                    type="file"
+                    accept=".csv,.txt"
+                    className="hidden"
+                    onChange={handleFileUpload}
+                    disabled={running}
+                  />
+                </label>
+              ) : (
+                <div className="p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-indigo-500 dark:text-indigo-400 text-sm">📄</span>
+                    <span className="text-sm text-slate-700 dark:text-slate-300 font-medium truncate flex-1">{uploadedFile.name}</span>
+                    {intakeRunning && <span className="text-xs text-slate-400 dark:text-slate-500 animate-pulse">Reading…</span>}
+                    <button
+                      onClick={handleRemoveFile}
+                      disabled={running}
+                      className="text-slate-300 dark:text-slate-600 hover:text-red-400 dark:hover:text-red-500 text-base leading-none bg-transparent border-0 cursor-pointer transition-colors disabled:cursor-not-allowed flex-shrink-0"
+                    >×</button>
+                  </div>
+                  {customerData && (
+                    <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">{customerData.rawSummary}</p>
+                  )}
+                  {!customerData && intakeLog.length > 0 && (
+                    <p className="text-xs text-slate-400 dark:text-slate-500">{intakeLog[intakeLog.length - 1]}</p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Analysis mode tabs + inputs */}

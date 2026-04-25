@@ -3,7 +3,7 @@
 // Outputs : full HTML report (streamed chunk by chunk)
 
 import { callClaudeStreaming } from './claudeClient'
-import type { ScraperData, SentimentData, PositioningData, MyProduct } from '../types'
+import type { ScraperData, SentimentData, PositioningData, MyProduct, CustomerDataContext } from '../types'
 
 const SYSTEM = `You are an expert in competitive intelligence and B2B executive communication.
 Generate a complete, self-contained HTML report using the exact design system below. The report must look premium and polished — like a professional analyst brief.
@@ -126,6 +126,7 @@ function buildPrompt(
   myProduct: MyProduct,
   analysisDate: string,
   focus?: string,
+  customerData?: CustomerDataContext,
 ): string {
   const focusLine = focus ? `Focus area for this report: ${focus}\n` : ''
   const parts = [
@@ -145,6 +146,17 @@ function buildPrompt(
     ? `## Spoke 3 — Positioning\n\`\`\`json\n${JSON.stringify(positioning, null, 2)}\n\`\`\``
     : '## Spoke 3 — Positioning\n**DATA UNAVAILABLE**')
 
+  if (customerData) {
+    parts.push(
+      `## Customer Data (uploaded by user)\n` +
+      `File: ${customerData.fileName} (${customerData.rowCount} entries)\n` +
+      `Summary: ${customerData.rawSummary}\n\n` +
+      `${customerData.insights}\n\n` +
+      `IMPORTANT: Integrate these first-party insights into the Executive Summary and Strategic Recommendations. ` +
+      `Reference specific numbers (e.g. "you lost X deals to ${competitor} citing Y") where available.`
+    )
+  }
+
   return parts.join('\n\n')
 }
 
@@ -157,8 +169,9 @@ export async function* runReport(
   deep = false,
   userApiKey?: string | null,
   focus?: string,
+  customerData?: CustomerDataContext,
 ): AsyncGenerator<string> {
   const analysisDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-  const user = buildPrompt(competitor, scraper, sentiment, positioning, myProduct, analysisDate, focus)
+  const user = buildPrompt(competitor, scraper, sentiment, positioning, myProduct, analysisDate, focus, customerData)
   yield* callClaudeStreaming(SYSTEM, user, deep, userApiKey)
 }

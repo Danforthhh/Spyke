@@ -78,6 +78,13 @@ export interface SharedProduct extends MyProduct {
   createdAt: number  // Unix timestamp ms
 }
 
+export interface CustomerDataContext {
+  rawSummary: string   // What Claude understood from the file
+  fileName: string     // Original file name
+  rowCount: number     // Number of entries/rows detected
+  insights: string     // Key insights in markdown (objections, lost deals, patterns)
+}
+
 export const DEFAULT_MY_PRODUCT: MyProduct = {
   name: 'FlowDesk',
   category: 'B2B SaaS CRM',

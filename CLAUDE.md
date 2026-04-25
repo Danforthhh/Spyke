@@ -232,6 +232,27 @@ match /products/{productId} {
 }
 ```
 
+## Customer data upload (intake pass) — 2026-04-25
+**Context:** Spyke was a pure Claude wrapper — all intelligence came from public web data. To create proprietary value, users can now upload their own CRM exports (win/loss data, deal notes) so the report references their actual history against a competitor.
+
+**Options considered:**
+- **Paste text (textarea)** — zero code, but poor UX for CSV files.
+- **Inline file upload → text → Claude (chosen)** — file read client-side via FileReader, content passed directly in the prompt. No worker changes, no storage, no liability.
+- **Claude Files API** — proper file handling but requires multipart support in the worker and added complexity.
+
+**Chosen:** Inline approach — FileReader → string → Claude Haiku intake pass
+- Intake pass runs before the 3 research spokes; extracts row count, summary, and key insights (objections, lost deals, patterns)
+- Result injected into `buildPrompt()` as a 4th data source alongside the 3 web spokes
+- Works in both DEV (Groq) and PROD (Claude Haiku) — no mode-specific logic needed
+- Files are never stored or sent to any server other than the AI provider
+- Graceful fallback: if intake JSON parsing fails, raw file content is included directly
+
+**Files added/modified:**
+- `src/services/intakeService.ts` — NEW: intake pass logic
+- `src/types.ts` — added `CustomerDataContext` interface
+- `src/services/spokeReport.ts` — `buildPrompt()` + `runReport()` accept optional `customerData`
+- `src/App.tsx` — upload UI, file state, intake orchestration in `handleAnalyze()`
+
 ## Logo + mode toggle redesign — 2026-04-10
 **Context:** Original favicon was two concentric circles (generic). DevModeToggle was a `position: fixed` pill in the top-right corner; switching to PROD without an API key showed a detached tooltip that required navigating to AccountModal separately.
 
